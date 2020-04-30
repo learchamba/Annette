@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+<head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="buttons.js"></script>
+
+</head>
+    <body>
+
+        <div class="fluid-container">
+            <div class="row">
+                <!-- colonne de gauche-->
+                <div class="col-9">
+                    <div class="row">
+                        <div class="col-1"></div>
+
+                        <div class="col-10">
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg btn-mdb-color" id="btnEntrainer">
+                                Entraîner le réseau
+                            </button>
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAnnot1">
+                                Annotation auto
+                            </button>
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAnnotPlus">
+                                Annotation dossier
+                            </button>
+                            <button class="btn btn-outline-dark btn-rounded btn-lg">
+                                corriger point
+                            </button>
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg">
+                                corriger courbe
+                            </button>
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnCoherence">
+                                cohérence temporelle
+                            </button>
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAnnuler">
+                                annuler
+                            </button>
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAjoutPoint">
+                                point
+                            </button>
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAjoutLigne">
+                                ligne
+                            </button>
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAjoutEllipse">
+                                ellipse
+                            </button>
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAjoutZoneFermee">
+                                région fermée
+                            </button>
+
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnSupprAnnotation">
+                                suppr
+                            </button>
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnValider">
+                                Valider
+                            </button>
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnExport">
+                                Exporter
+                            </button>
+                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnMasquer" >
+                                Masquer les annotations
+                            </button>
+                        </div>
+                    </div>
+
+
+
+                    <div class="container-fluid">
+                        <div class="row ">
+                            <div class="col-1"></div>
+                            <div class="col-md-10" style="background-color: #0b2e13">
+                                <div class="card">
+                                    <div class="d-flex justify-content-center" id="divImagePrincipale">
+                                        <img class="img-responsive img-thumbnail w-100" src="./test.png" id="imageCourante">
+                                    </div>
+                                    <div class="card-img-overlay">
+                                        <img class="img-responsive w-100" src="./loupeMoins.png" id="imageMasque">
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+
+                <!-- colonne de droite -->
+                <div class="col-3"><!-- Menu de droite-->
+
+                    <div class="row" style="background-color: #a71d2a"> <!-- Menu du haut-->
+                        <button class="btn btn-outline-dark btn-rounded btnHaut" id="btnChargement">
+                            <img src="./plus.png" width="50"/>
+                        </button>
+
+                        <button class="btn btn-outline-dark btn-rounded btnHaut" id="btnChargePlus">
+                            <img src="./plusplus.png" width="50"/>
+                        </button>
+
+                        <button class="btn btn-outline-dark btn-rounded btnHaut" id="btnChargeVideo">
+                            <img src="./bobineFilm.png" width="50"/>
+                        </button>
+
+                        <button class="btn btn-outline-dark btn-rounded btnHaut" id="btnSupprImage">
+                            <img src="./moins.png" width="50"/>
+                        </button>
+
+                        <button class="btn btn-outline-dark btn-rounded btnHaut" id="btnSupprPlusImage">
+                            <img src="./moinsmoins.png" width="50"/>
+                        </button>
+
+                        <button class="btn btn-outline-dark btn-rounded btnHaut" id="btnZoomPlus">
+                            <img src="./loupePlus.png" width="50"/>
+                        </button>
+
+                        <button class="btn btn-outline-dark btn-rounded btnHaut" id="btnZoomMoins">
+                            <img src="./loupeMoins.png" width="50"/>
+                        </button>
+                    </div>
+
+                    <div class="row" style="background-color: #5a6268"> <!-- Stockage photos-->
+                        <div class="col-1"></div>
+                            <div class="col-10">
+
+                                <div class="d-flex justify-content-center">
+                                    <button class="btn btn-outline-dark btn-rounded btm-lg btn-info" id="btnDefileHaut">
+                                        défile haut
+                                    </button>
+                                </div>
+
+                                <div class="row" style="overflow-y:scroll">
+                                        <div id="divImageL1">
+                                            <img class="imgChargees img-fluid img-thumbnail" src="./test.png" id="imageL1"/>
+                                        </div>
+
+                                        <div id="divImageL2">
+                                            <img class="imgChargees img-fluid img-thumbnail" src="./test.png" id="imageL2"/>
+                                        </div>
+
+                                        <div id="divImageL3">
+                                            <img class="imgChargees img-fluid img-thumbnail" src="./test.png" id="imageL3"/>
+                                        </div>
+
+                                        <div id="divImageL4">
+                                            <img class="imgChargees img-fluid img-thumbnail" src="./test.png" id="imageL4"/>
+                                        </div>
+                                </div>
+
+                                <div class="d-flex justify-content-center">
+                                    <button class="btn btn-outline-dark btn-rounded btm-lg btn-info" id="btnDefileBas">
+                                        défile bas
+                                    </button>
+                                </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

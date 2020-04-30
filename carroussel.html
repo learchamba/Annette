@@ -1,0 +1,141 @@
+<style>
+    #thumbnail-preview-indicators {
+position: relative;
+overflow: hidden;
+}
+#thumbnail-preview-indicators .slides .slide-1,
+#thumbnail-preview-indicators .slides .slide-2,
+#thumbnail-preview-indicators .slides .slide-3 {
+background-size: cover;
+background-position: center center;
+background-repeat: no-repeat;
+}
+#thumbnail-preview-indicators,
+#thumbnail-preview-indicators .slides,
+#thumbnail-preview-indicators .slides .slide-1,
+#thumbnail-preview-indicators .slides .slide-2,
+#thumbnail-preview-indicators .slides .slide-3 {
+height: 480px;
+}
+#thumbnail-preview-indicators .slides .slide-1 {
+background-image: url(https://s3.amazonaws.com/ooomf-com-files/wdXqHcTwSTmLuKOGz92L_Landscape.jpg);
+}
+#thumbnail-preview-indicators .slides .slide-2 {
+background-image: url(https://s3.amazonaws.com/ooomf-com-files/tU3ptNgGSP6U2fE67Gvy_SYDNEY-162.jpg);
+}
+#thumbnail-preview-indicators .slides .slide-3 {
+background-image: url(https://s3.amazonaws.com/ooomf-com-files/mtNrf7oxS4uSxTzMBWfQ_DSC_0043.jpg);
+}
+#thumbnail-preview-indicators .carousel-inner .item .carousel-caption {
+top: 20%;
+bottom: inherit;
+}
+
+/* CAROUSEL INDICATORS */
+#thumbnail-preview-indicators .carousel-indicators li,
+#thumbnail-preview-indicators .carousel-indicators li.active {
+width: 152px;
+height: auto;
+max-height: 102px;
+
+background-color: transparent;
+border: 1px solid white;
+border-radius: 1px;
+}
+#thumbnail-preview-indicators .carousel-indicators li.active {
+border: 1px solid red;
+}
+#thumbnail-preview-indicators .carousel-indicators li > .thumbnail {
+width: 150px;
+height: auto;
+max-height: 100px;
+overflow: hidden;
+
+opacity: 0.8;
+display: block;
+padding: 0;
+margin-bottom: 0;
+background-color: #fff;
+border: none;
+border-radius: 2px;
+transition: all 550ms ease-out;
+}
+#thumbnail-preview-indicators .carousel-indicators li:hover > .thumbnail,
+#thumbnail-preview-indicators .carousel-indicators li.active > .thumbnail:hover {
+position: relative;
+display: block;
+border: 1px solid white;
+opacity: 1;
+transform: scale(1.5);
+z-index: 1;
+}
+#thumbnail-preview-indicators .carousel-indicators li.active > .thumbnail:hover {
+border: 1px solid red;
+}
+
+@media screen and (min-width: 480px) {
+}
+@media screen and (min-width: 768px) {
+}
+@media screen and (min-width: 1024px) {
+}
+@media screen and (min-width: 1200px) {
+}
+@media screen and (min-width: 1440px) {
+}
+</style>
+
+<div id="thumbnail-preview-indicators" class="carousel slide" data-ride="carousel">
+    <!-- Indicators -->
+    <ol class="carousel-indicators">
+        <li data-target="#thumbnail-preview-indicators" data-slide-to="0" class="active">
+            <div class="thumbnail">
+                <img class="img-responsive" src="https://s3.amazonaws.com/ooomf-com-files/wdXqHcTwSTmLuKOGz92L_Landscape.jpg">
+            </div>
+        </li>
+        <li data-target="#thumbnail-preview-indicators" data-slide-to="1">
+            <div class="thumbnail">
+                <img class="img-responsive" src="https://s3.amazonaws.com/ooomf-com-files/tU3ptNgGSP6U2fE67Gvy_SYDNEY-162.jpg">
+            </div>
+        </li>
+        <li data-target="#thumbnail-preview-indicators" data-slide-to="2">
+            <div class="thumbnail">
+                <img class="img-responsive" src="https://s3.amazonaws.com/ooomf-com-files/mtNrf7oxS4uSxTzMBWfQ_DSC_0043.jpg">
+            </div>
+        </li>
+    </ol>
+    <div class="carousel-inner">
+        <div class="item slides active">
+            <div class="slide-1"></div>
+            <div class="container">
+                <div class="carousel-caption">
+                    <h1>New carousel layout</h1>
+                    <p>Responsive thumbnail preview in carousel indicators.</p>
+                    <p><a class="btn btn-lg btn-primary" href="#" role="button">Sign up today</a></p>
+                </div>
+            </div>
+        </div>
+        <div class="item slides">
+            <div class="slide-2"></div>
+            <div class="container">
+                <div class="carousel-caption">
+                    <h1>Another example headline.</h1>
+                    <p>Cras justo odio, dapibus ac facilisis in, egestas eget quam.</p>
+                    <p><a class="btn btn-lg btn-primary" href="#" role="button">Learn more</a></p>
+                </div>
+            </div>
+        </div>
+        <div class="item slides">
+            <div class="slide-3"></div>
+            <div class="container">
+                <div class="carousel-caption">
+                    <h1>One more for good measure.</h1>
+                    <p>Nullam id dolor id nibh ultricies vehicula ut id elit.</p>
+                    <p><a class="btn btn-lg btn-primary" href="#" role="button">Browse gallery</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <a class="left carousel-control" href="#thumbnail-preview-indicators" role="button" data-slide="prev"><span class="glyphicon glyphicon-chevron-left"></span></a>
+    <a class="right carousel-control" href="#thumbnail-preview-indicators" role="button" data-slide="next"><span class="glyphicon glyphicon-chevron-right"></span></a>
+</div>
