@@ -9,6 +9,7 @@ var indiceListe;
 var indiceImages;
 var divImgPrinc;
 
+var selected = [];
 var listeImages = [];
 
 window.onload = init;
@@ -29,12 +30,38 @@ function init() {
     btnMasquer = document.getElementById('btnMasquer');
     imageMasque = document.getElementById('imageMasque');
     btnChargement = document.getElementById('btnChargement');
+    divImgPrinc = document.getElementById('divImagePrincipale');
+
     document.getElementById('btnDefileHaut').addEventListener('click',defileHaut);
     document.getElementById('btnDefileBas').addEventListener('click',defileBas);
-    divImgPrinc = document.getElementById('divImagePrincipale');
+    document.getElementById('btnSupprImage').addEventListener('click',supprImages);
 
     btnMasquer.addEventListener('click', masquerMasque);
     btnChargement.addEventListener('click', load1Picture);
+
+    for(var i = 1; i<5; ++i) {
+        document.getElementById("imageL"+i).addEventListener('dblclick', function (e) {
+            document.getElementById('imageCourante').src = e.target.src;
+        });
+
+
+        document.getElementById("imageL"+i).addEventListener('click',
+            function (e) {
+                console.log("click");
+                var indiceFic = parseInt(e.target.id.charAt(e.target.id.length-1));
+                if(indiceFic<=listeImages.length) {
+                    indiceFic += debutListe - 1;
+                    if (!e.target.className.includes("thumbnail")) {
+                        e.target.className = "img-fluid img-thumbnail";
+                        selected.push(listeImages[indiceFic]);
+                    } else {
+                        e.target.className = "img-fluid";
+                        selected.splice(selected.indexOf(listeImages[indiceFic]), 1);
+                    }
+                }
+            });
+
+    }
 }
 
 function load1Picture() {
@@ -54,7 +81,6 @@ function imageHandler(e2)
     var idImg = 'imageL'+indiceImages;
 
     document.getElementById(idImg).src = e2.target.result;
-    document.getElementById(idImg).addEventListener('dblclick', function (e) {document.getElementById('imageCourante').src = e.target.src;});
     ++indiceImages;
 }
 
@@ -84,20 +110,51 @@ function afficheListeImages() {
 }
 
 function defileHaut() {
-    console.log(debutListe);
-    console.log(listeImages.length);
+    var id;
+    var idSuiv = "imageL1";
     if(debutListe < listeImages.length - 4) {
-        console.log('inH');
+        for (var i = 2; i<5; i++) {
+            id=idSuiv;
+            idSuiv = "imageL"+i;
+            document.getElementById(id).src = document.getElementById(idSuiv).src;
+        }
+        var fr = new FileReader();
+        fr.onload = imageHandler;
+        var filename = listeImages[debutListe+4];
+        indiceImages = 4;
+        fr.readAsDataURL(filename);
         debutListe++;
-        afficheListeImages();
     }
 }
 
 function defileBas() {
-    console.log('out');
-    if(debutListe > 0) {
-        console.log('in');
+    var id="imageL4";
+    var idPrec;
+    console.log("init");
+    if(debutListe <= listeImages.length - 4 && debutListe > 0) {
+        console.log("if");
         debutListe--;
-        afficheListeImages();
+        for (var i = 3; i>0; i--) {
+            idPrec=id;
+            id = "imageL"+i;
+            document.getElementById(idPrec).src = document.getElementById(id).src;
+        }
+        var fr = new FileReader();
+        fr.onload = imageHandler;
+        var filename = listeImages[debutListe];
+        indiceImages = 1;
+        fr.readAsDataURL(filename);
+    }
+}
+
+function supprImages() {
+
+    while(selected.length != 0){
+        listeImages.splice(listeImages.indexOf(selected.shift()),1);
+    }
+    afficheListeImages();
+    for(var i=1;i<5;++i) {
+        var id = "imageL"+i;
+        document.getElementById(id).className = "img-fluid";
     }
 }
