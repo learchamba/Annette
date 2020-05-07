@@ -26,6 +26,7 @@
                             <button class="btn btn-outline-dark btn-rounded btn-lg btn-mdb-color" id="btnEntrainer">
                                 Entraîner le réseau
                             </button>
+
                             <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAnnot1">
                                 Annotation auto
                             </button>
@@ -33,6 +34,7 @@
                             <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAnnotPlus">
                                 Annotation dossier
                             </button>
+
                             <button class="btn btn-outline-dark btn-rounded btn-lg">
                                 corriger point
                             </button>
@@ -47,9 +49,6 @@
 
                             <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAnnuler">
                                 annuler
-                            </button>
-                            <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAjoutPoint">
-                                point
                             </button>
 
                             <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnAjoutLigne">
@@ -67,12 +66,15 @@
                             <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnSupprAnnotation">
                                 suppr
                             </button>
+
                             <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnValider">
                                 Valider
                             </button>
+
                             <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnExport">
                                 Exporter
                             </button>
+
                             <button class="btn btn-outline-dark btn-rounded btn-lg" id="btnMasquer" >
                                 Masquer les annotations
                             </button>
@@ -86,11 +88,12 @@
                             <div class="col-1"></div>
                             <div class="col-md-10" style="background-color: #0b2e13">
                                 <div class="card">
-                                    <div class="d-flex justify-content-center" id="divImagePrincipale">
-                                        <img class="img-responsive img-thumbnail w-100" src="./test.png" id="imageCourante">
+                                    <div class="d-flex justify-content-center px-3 pt-3" id="divImagePrincipale">
+                                        <img class="img-responsive w-100" src="./test.png" style="margin: 4px 4px 0 4px" id="imageCourante">
                                     </div>
-                                    <div class="card-img-overlay">
-                                        <img class="img-responsive w-100" src="./loupeMoins.png" id="imageMasque">
+                                    <div class="card-img-overlay" id="divCanvas">
+                                        <canvas class="img-responsive w-100" id="canvas"> </canvas>
+                                        <!--<img class="img-responsive w-100" src="./loupeMoins.png" id="imageMasque">-->
                                     </div>
 
                                 </div>
