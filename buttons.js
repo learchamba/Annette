@@ -8,15 +8,19 @@ var debutListe = 0;
 var indiceListe;
 var indiceImages;
 var divImgPrinc;
-var canvas;
-var ctx;
 var imageCourante;
 var nbPoints =0;
 var indiceImageCourante;
 var pointsEllipse;
 var annotationsStockees;
-var annotationLigne;
-var debutLigne;
+var stage;
+var ptsLigne;
+var poly;
+var layer;
+var nbElem;
+var oldPos;
+var ellipseCliquee = 0;
+var niveauZoom =1;
 
 var modeCanvas = 0;
 /*
@@ -26,8 +30,6 @@ var modeCanvas = 0;
 * 3 : zone polygonale fermée
 *
 * */
-var currentPath;
-
 
 var selected = [];
 var listeImages = [];
@@ -39,10 +41,12 @@ function masquerMasque() {
 
     if (masqueVisible) {
         masqueVisible = false;
-        canvas.style.visibility = 'hidden';
+        document.getElementById('divCanvas').style.visibility = 'hidden';
+        document.getElementById('btnMasquer').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
     } else {
         masqueVisible = true;
-        canvas.style.visibility = 'visible';
+        document.getElementById('divCanvas').style.visibility = 'visible';
+        document.getElementById('btnMasquer').className = "btn btn-outline-dark btn-rounded btn-lg";
     }
 }
 
@@ -62,6 +66,7 @@ function init() {
             document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg";
         }else{
             modeCanvas = 1;
+            boutonsOff();
             document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
         }
     }, false);
@@ -71,6 +76,7 @@ function init() {
             document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
         }else{
             modeCanvas = 2;
+            boutonsOff();
             document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
             pointsEllipse = [];
         }
@@ -81,16 +87,28 @@ function init() {
             document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg";
         }else{
             modeCanvas = 3;
+            boutonsOff();
             document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
         }
     }, false);
     document.getElementById('btnValider').addEventListener(('click'), function () {
-        $("body").append("<a href='" + canvas.toDataURL() + "' id='DLCanvas' download='annotation" + indiceImageCourante + ".jpg'>");
+        // $("body").append("<a href='" + stage.toDataURL() + "' id='DLCanvas' download='annotation" + indiceImageCourante + ".jpg'>");
         var y = document.getElementById("DLCanvas");
+        y.href = stage.toDataURL();
+        y.download = 'annotation' + indiceImageCourante + '.jpg'
+
         y.addEventListener('change', downloadimage, false);
         annotationsStockees = [];
         y.click();
     });
+
+    // document.getElementById('btnZoomPlus').addEventListener(('click'), function () {
+    //     if(niveauZoom <8) {
+    //         niveauZoom*=2;
+    //         stage.scale({x: niveauZoom, y: niveauZoom});
+    //     }
+    //
+    // });
 
 
     btnMasquer.addEventListener('click', masquerMasque);
@@ -100,11 +118,32 @@ function init() {
     document.getElementById('btnAnnuler').addEventListener('click', annulerAnnotation);
 
     imageCourante.addEventListener('load', function () {
-        canvasWidth = this.clientWidth;
-        canvasHeight = this.clientHeight;
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        ctx.drawImage(this, 0, 0, canvasWidth, canvasHeight);
+        var canvasWidth = this.clientWidth;
+        var canvasHeight = this.clientHeight;
+        stage = new Konva.Stage({
+            container: 'divCanvas',
+            width: canvasWidth,
+            height: canvasHeight
+        });
+        var layerBkgrd = new Konva.Layer();
+        var imgBkgrd = new Image();
+        imgBkgrd.src = this.src;
+            var rect = new Konva.Rect( {
+                x: 0,
+                y: 0,
+                width: canvasWidth,
+                height: canvasHeight,
+                fillPatternImage:imgBkgrd,
+                fillPatternRepeat: 'no-repeat',
+                fillPatternScaleX: canvasWidth/imgBkgrd.width,
+                fillPatternScaleY: canvasHeight/imgBkgrd.height,
+            });
+        layerBkgrd.add(rect);
+        stage.add(layerBkgrd);
+        layerBkgrd.draw();
+        layer = new Konva.Layer();
+        stage.add(layer);
+
     }, false);
 
 
@@ -129,8 +168,7 @@ function init() {
                 }
             });
     }
-
-
+    nbElem = 0;
 }
 
 function load1Picture() {
@@ -145,7 +183,6 @@ function load1Picture() {
 
 function imageHandler(e2)
 {
-    var name = 'divImageL'+indiceImages;
     var idImg = 'imageL'+indiceImages;
     document.getElementById(idImg).src = e2.target.result;
     ++indiceImages;
@@ -239,89 +276,148 @@ function findPos(obj) {
 }
 
 function initCanvas() {
-    canvas = document.getElementById("canvas");
-    ctx = canvas.getContext("2d");
-    annotationsStockees = [];
 
-    canvas.addEventListener('click',function(e) {
+    var divCanvas = document.getElementById('divCanvas');
+
+    divCanvas.addEventListener('click',function(e) {
+        var pos = findPos(this);
+        var x = e.pageX - pos.x-20;
+        var y = e.pageY - pos.y-20;
         switch(modeCanvas) {
             case 3:
             case 1:
-                var pos = findPos(this);
-                var x = e.pageX - pos.x;
-                var y = e.pageY - pos.y;
                 if(nbPoints == 0) {
-                    ctx.beginPath();
-                    ctx.moveTo(x,y);
-                    nbPoints = 1;
+
+                    ptsLigne = [];
+                    ptsLigne.push(x);
+                    ptsLigne.push(y);
+                    poly = new Konva.Line({
+                        points: ptsLigne,
+                        stroke: 'blue',
+                        strokeWidth: 1,
+                        draggable: true,
+                        id: nbElem,
+                    });
+                    poly.on('dragend', function () {
+                        var circles = layer.getChildren(function(node){
+                            return node.getClassName() === 'Arc';
+                        });
+                        var idLigne = this.attrs['id'];
+                        var diffX = this.attrs['x']  - oldPos[0];
+                        var diffY = this.attrs['y'] - oldPos[1];
+
+                        this.attrs['x'] = oldPos[0];
+                        this.attrs['y'] = oldPos[1];
+                        circles = circles.filter(circle => circle.attrs['id'].split('-')[0] == idLigne);
+
+                        while(circles.length != 0) {
+                            circles.shift().destroy();
+                        }
+                        console.log(this.points()[0]);
+                        for(i = 0; i< this.points().length; ++i) {
+                            var idCircle = this.attrs['id']+'-'+i;
+                            createDot(this.points()[i]+diffX, this.points()[++i]+diffY, idCircle);
+                        }
+                        layer.draw();
+                    });
+                    poly.on('dragstart', function () {
+                        oldPos = [this.x(), this.y()];
+                    });
+                    nbElem++;
+                    layer.add(poly);
+
 
                     if(modeCanvas == 3) {
-                        debutLigne = [x, y];
-                        annotationsStockees.push([3]);
-                    } else {
-                        annotationsStockees.push([1]);
+                        poly.closed(true);
                     }
                 }
                 else {
-                    if(modeCanvas == 3) {
-                        if(distance(debutLigne, [x,y]) < 15) {
-                            x = debutLigne[0];
-                            y = debutLigne[1];
-                            modeCanvas = 0;
-                        }
-                    }
-                    ctx.lineTo(x,y);
-                    configCtx();
-                    ctx.stroke();
-                    ctx.save();
+                    poly.points(poly.points().concat([x, y]));
                 }
-                annotationsStockees[annotationsStockees.length-1].push([x,y]);
+                var idCircle = poly.attrs['id']+'-'+nbPoints;
+                nbPoints++;
+                createDot(x,y,idCircle);
+
+
+
+
                 break;
             case 2:
-                var pos = findPos(this);
-                var x = e.pageX - pos.x;
-                var y = e.pageY - pos.y;
                 pointsEllipse.push([x,y]);
 
                 if(pointsEllipse.length == 3) {
                     // Abscisse, ordonnée, rayon abscisse, rayon ordonnée, rotation, début, fin
-                    configCtx();
                     var centreX = pointsEllipse[0][0];
                     var centreY = pointsEllipse[0][1];
                     var rayX = distance(pointsEllipse[0], pointsEllipse[1]);
                     var rayY = distance(pointsEllipse[0],pointsEllipse[2]);
-                    var rotation = 0;
-                    var debut = 0;
-                    var fin = 2*Math.PI;
-                    ctx.moveTo(centreX + rayX, centreY);
-                    ctx.ellipse(centreX, centreY, rayX, rayY, rotation, debut, fin);
-                    ctx.stroke();
-                    annotationsStockees.push([2, centreX, centreY, rayX, rayY, rotation, debut, fin]);
+
+                    var elli = new Konva.Ellipse({
+                        x:centreX,
+                        y:centreY,
+                        radiusX:rayX,
+                        radiusY:rayY,
+                        stroke: 'blue',
+                        strokeWidth: 1,
+                        draggable: true,
+                    });
+                    layer.add(elli);
+
+                    elli.on('dblclick', function () {
+                        if(ellipseCliquee) {
+                            ellipseCliquee = 0;
+                            var trns = layer.getChildren(function (node) {
+                                return node.getClassName() === 'Transformer';
+                            })[0];
+                            trns.destroy();
+                            layer.draw();
+                        } else {
+                            ellipseCliquee = 1;
+                            var tr = new Konva.Transformer({
+                                boundBoxFunc: function (oldBoundBox, newBoundBox) {
+                                    // "boundBox" is an object with
+                                    // x, y, width, height and rotation properties
+                                    // transformer tool will try to fit nodes into that box
+
+                                    // the logic is simple, if new width is too big
+                                    // we will return previous state
+                                    if (Math.abs(newBoundBox.width) > 400) {
+                                        return oldBoundBox;
+                                    }
+
+                                    return newBoundBox;
+                                },
+                            });
+
+                            layer.add(tr);
+                            tr.attachTo(elli);
+                            layer.draw();
+                        }
+
+                    });
+                    layer.draw();
                     modeCanvas = 0;
                     document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
                 }
                 break;
             default:
                 var pos = findPos(this);
-                var x = e.pageX - pos.x;
-                var y = e.pageY - pos.y;
+                var x = e.pageX - pos.x -20;
+                var y = e.pageY - pos.y-20;
                 var coord = "x=" + x + ", y=" + y;
                 console.log(coord);
         }
     }, false);
 
-    canvas.addEventListener('contextmenu', function (e) {
+
+    divCanvas.addEventListener('contextmenu', function (e) {
         e.preventDefault();
         switch(modeCanvas) {
             case 1:
-                currentPath = new Path2D();
                 nbPoints = 0;
-                annotationsStockees.push(annotationLigne);
                 break;
             case 3:
-                ctx.closePath();
-                ctx.stroke();
-                annotationsStockees[annotationsStockees.length-1].push(debutLigne);
+                nbPoints = 0;
                 break;
             default:
                 console.log("bla");
@@ -331,8 +427,6 @@ function initCanvas() {
 
 function downloadimage() {
     document.getElementById("DLCanvas").remove();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    currentPath = new Path2D();
     nbPoints = 0;
 }
 
@@ -344,39 +438,59 @@ function distance(pt1, pt2) {
 
 
 function annulerAnnotation() {
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-    ctx.beginPath();
-    for(var i = 0 ; i<annotationsStockees.length-1; ++i) {
-        switch(annotationsStockees[i][0]) {
-            case 3 :
-            case 1 :
-                ctx.moveTo(annotationsStockees[i][1][0], annotationsStockees[i][1][1]);
-                for(var j = 2; j < annotationsStockees[i].length; ++j) {
-                    ctx.lineTo(annotationsStockees[i][j][0], annotationsStockees[i][j][1]);
-                }
-                break;
-            case 2 :
-                ctx.ellipse(annotationsStockees[i][1],annotationsStockees[i][2],annotationsStockees[i][3],annotationsStockees[i][4],annotationsStockees[i][5],annotationsStockees[i][6],annotationsStockees[i][7]);
-                break;
-
-        }
-    }
-    var lenAnnot = annotationsStockees.length-1;
-    if(annotationsStockees[lenAnnot] && annotationsStockees[lenAnnot][0] == 1 || annotationsStockees[lenAnnot][0] == 3) {
-        annotationsStockees[lenAnnot].pop();
-        ctx.moveTo(annotationsStockees[lenAnnot][1][0], annotationsStockees[lenAnnot][1][1]);
-        for(var j = 2; j < annotationsStockees[lenAnnot].length; ++j) {
-            ctx.lineTo(annotationsStockees[lenAnnot][j][0], annotationsStockees[lenAnnot][j][1]);
-        }
+    var children = layer.getChildren();
+    var last = children[children.length-1];
+    if(last.getClassName() == 'Line'){
+        last.points().pop();
+        last.points().pop();
+        if(last.points().length == 2)
+            children.pop();
     } else {
-        annotationsStockees.pop();
+        children.pop();
     }
-
-    configCtx();
-    ctx.stroke();
+    layer.draw();
 }
 
-function configCtx() {
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'blue';
+
+function boutonsOff() {
+    document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg";
+    document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg";
+    document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
+    document.getElementById('btnSupprImage').className = "btn btn-outline-dark btn-rounded btn-lg";
+    nbPoints = 0;
 }
+
+function createDot(x, y, idCircle) {
+    var circle = new Konva.Arc({
+        x: x,
+        y: y,
+        outerRadius: 4,
+        angle: 360,
+        stroke: 'red',
+        strokeWidth: 2,
+        draggable: true,
+        id: idCircle,
+    });
+    circle.on('dragmove', function () {
+        boutonsOff();
+        modeCanvas = 0;
+        var pos = stage.getPointerPosition();
+        var posx =  pos.x;
+        var posy =  pos.y;
+
+        var id = this.attrs['id'];
+
+        var ligne = parseInt(id.split('-')[0]);
+        var points = parseInt(id.split('-')[1]);
+        var lines = layer.getChildren(function(node){
+            return node.getClassName() === 'Line';
+        });
+        lines[ligne].points()[2*points] = posx;
+        lines[ligne].points()[2*points+1] = posy;
+    });
+    layer.add(circle);
+    layer.draw();
+
+}
+
+
