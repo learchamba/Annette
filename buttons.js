@@ -21,6 +21,8 @@ var nbElem;
 var oldPos;
 var ellipseCliquee = 0;
 var niveauZoom =1;
+var initialPosStage;
+var preDragPosStage;
 
 var modeCanvas = 0;
 /*
@@ -28,7 +30,7 @@ var modeCanvas = 0;
 * 1 : ajout ligne
 * 2 : ajout ellipse
 * 3 : zone polygonale fermée
-*
+* 4 : Correction
 * */
 
 var selected = [];
@@ -42,10 +44,12 @@ function masquerMasque() {
     if (masqueVisible) {
         masqueVisible = false;
         document.getElementById('divCanvas').style.visibility = 'hidden';
+        document.getElementById('imageCourante').style.visibility = 'visible';
         document.getElementById('btnMasquer').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
     } else {
         masqueVisible = true;
         document.getElementById('divCanvas').style.visibility = 'visible';
+        document.getElementById('imageCourante').style.visibility = 'hidden';
         document.getElementById('btnMasquer').className = "btn btn-outline-dark btn-rounded btn-lg";
     }
 }
@@ -60,6 +64,32 @@ function init() {
     document.getElementById('btnDefileHaut').addEventListener('click',defileHaut);
     document.getElementById('btnDefileBas').addEventListener('click',defileBas);
     document.getElementById('btnSupprImage').addEventListener('click',supprImages);
+    document.getElementById('btnCorrectionn').addEventListener('click', function () {
+        if(modeCanvas == 4){
+            modeCanvas = 0;
+            document.getElementById('btnCorrectionn').className = "btn btn-outline-dark btn-rounded btn-lg";
+            if(niveauZoom != 1)
+                stage.draggable(true);
+            for(var shape in layer.getChildren()) {
+                shape.draggable(false);
+            }
+            ellipseCliquee = 0;
+            var trns = layer.getChildren(function (node) {
+                return node.getClassName() === 'Transformer';
+            })[0];
+            trns.destroy();
+            layer.draw();
+
+        }else{
+            boutonsOff();
+            modeCanvas = 4;
+            document.getElementById('btnCorrectionn').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
+            stage.draggable(false);
+            for(var i = 0; i < layer.getChildren().length; ++i) {
+                layer.getChildren()[i].draggable(true);
+            }
+        }
+    });
     document.getElementById('btnAjoutLigne').addEventListener('click',function(){
         if(modeCanvas == 1){
             modeCanvas = 0;
@@ -93,8 +123,10 @@ function init() {
     }, false);
     document.getElementById('btnValider').addEventListener(('click'), function () {
         // $("body").append("<a href='" + stage.toDataURL() + "' id='DLCanvas' download='annotation" + indiceImageCourante + ".jpg'>");
+        maskArcs();
         var y = document.getElementById("DLCanvas");
         y.href = stage.toDataURL();
+        showArcs();
         y.download = 'annotation' + indiceImageCourante + '.jpg'
 
         y.addEventListener('change', downloadimage, false);
@@ -102,14 +134,62 @@ function init() {
         y.click();
     });
 
-    // document.getElementById('btnZoomPlus').addEventListener(('click'), function () {
-    //     if(niveauZoom <8) {
-    //         niveauZoom*=2;
-    //         stage.scale({x: niveauZoom, y: niveauZoom});
-    //     }
-    //
-    // });
+    document.getElementById('btnZoomPlus').addEventListener(('click'), function () {
+        if(niveauZoom <8) {
+            niveauZoom*=2;
+            var layerBkg = stage.getLayers()[0];
+            layerBkg.scale({x: niveauZoom, y: niveauZoom});
+            layer.scale({x: niveauZoom, y: niveauZoom});
+            stage.draggable(true);
+            stage.dragBoundFunc(function (pos) {
+                var newX;
+                var newY;
+                if(pos.x > 0) {
+                    newX =0;
+                } else {
+                    if(pos.x < -stage.width()*(niveauZoom-1)) {
+                        newX = -stage.width()*(niveauZoom-1);
+                    } else {
+                        newX = pos.x;
+                    }
+                }
 
+                if(pos.y > 0) {
+                    newY =0;
+                } else {
+                    if(pos.y < -stage.height()*(niveauZoom-1)) {
+                        newY = -stage.height()*(niveauZoom-1);
+                    } else {
+                        newY = pos.y;
+                    }
+                }
+
+                return {
+                    x: newX,
+                    y: newY,
+                };
+            });
+
+            layerBkg.draw();
+            layer.draw();
+        }
+    });
+
+    document.getElementById('btnZoomMoins').addEventListener(('click'), function () {
+        if(niveauZoom > 1) {
+            niveauZoom/=2;
+            var layerBkg = stage.getLayers()[0];
+            layerBkg.scale({x: niveauZoom, y: niveauZoom});
+            layer.scale({x: niveauZoom, y: niveauZoom});
+            stage.x(initialPosStage[0]);
+            stage.y(initialPosStage[1]);
+            layerBkg.draw();
+            layer.draw();
+            if(niveauZoom == 1) {
+                stage.draggable(false);
+            }
+        }
+    });
 
     btnMasquer.addEventListener('click', masquerMasque);
     btnChargement.addEventListener('click', load1Picture);
@@ -125,6 +205,7 @@ function init() {
             width: canvasWidth,
             height: canvasHeight
         });
+        initialPosStage = [stage.x(), stage.y()];
         var layerBkgrd = new Konva.Layer();
         var imgBkgrd = new Image();
         imgBkgrd.src = this.src;
@@ -137,6 +218,7 @@ function init() {
                 fillPatternRepeat: 'no-repeat',
                 fillPatternScaleX: canvasWidth/imgBkgrd.width,
                 fillPatternScaleY: canvasHeight/imgBkgrd.height,
+                id: 'imgBackground',
             });
         layerBkgrd.add(rect);
         stage.add(layerBkgrd);
@@ -283,6 +365,10 @@ function initCanvas() {
         var pos = findPos(this);
         var x = e.pageX - pos.x-20;
         var y = e.pageY - pos.y-20;
+        x -= stage.x();
+        y -= stage.y();
+        x = x/niveauZoom;
+        y = y/niveauZoom;
         switch(modeCanvas) {
             case 3:
             case 1:
@@ -295,7 +381,7 @@ function initCanvas() {
                         points: ptsLigne,
                         stroke: 'blue',
                         strokeWidth: 1,
-                        draggable: true,
+                        // draggable: true,
                         id: nbElem,
                     });
                     poly.on('dragend', function () {
@@ -313,7 +399,6 @@ function initCanvas() {
                         while(circles.length != 0) {
                             circles.shift().destroy();
                         }
-                        console.log(this.points()[0]);
                         for(i = 0; i< this.points().length; ++i) {
                             var idCircle = this.attrs['id']+'-'+i;
                             createDot(this.points()[i]+diffX, this.points()[++i]+diffY, idCircle);
@@ -359,39 +444,41 @@ function initCanvas() {
                         radiusY:rayY,
                         stroke: 'blue',
                         strokeWidth: 1,
-                        draggable: true,
+                        // draggable: true,
                     });
                     layer.add(elli);
 
                     elli.on('dblclick', function () {
-                        if(ellipseCliquee) {
-                            ellipseCliquee = 0;
-                            var trns = layer.getChildren(function (node) {
-                                return node.getClassName() === 'Transformer';
-                            })[0];
-                            trns.destroy();
-                            layer.draw();
-                        } else {
-                            ellipseCliquee = 1;
-                            var tr = new Konva.Transformer({
-                                boundBoxFunc: function (oldBoundBox, newBoundBox) {
-                                    // "boundBox" is an object with
-                                    // x, y, width, height and rotation properties
-                                    // transformer tool will try to fit nodes into that box
+                        if(modeCanvas == 4) {
+                            if(ellipseCliquee) {
+                                ellipseCliquee = 0;
+                                var trns = layer.getChildren(function (node) {
+                                    return node.getClassName() === 'Transformer';
+                                })[0];
+                                trns.destroy();
+                                layer.draw();
+                            } else {
+                                ellipseCliquee = 1;
+                                var tr = new Konva.Transformer({
+                                    boundBoxFunc: function (oldBoundBox, newBoundBox) {
+                                        // "boundBox" is an object with
+                                        // x, y, width, height and rotation properties
+                                        // transformer tool will try to fit nodes into that box
 
-                                    // the logic is simple, if new width is too big
-                                    // we will return previous state
-                                    if (Math.abs(newBoundBox.width) > 400) {
-                                        return oldBoundBox;
-                                    }
+                                        // the logic is simple, if new width is too big
+                                        // we will return previous state
+                                        if (Math.abs(newBoundBox.width) > 800) {
+                                            return oldBoundBox;
+                                        }
 
-                                    return newBoundBox;
-                                },
-                            });
+                                        return newBoundBox;
+                                    },
+                                });
 
-                            layer.add(tr);
-                            tr.attachTo(elli);
-                            layer.draw();
+                                layer.add(tr);
+                                tr.attachTo(elli);
+                                layer.draw();
+                            }
                         }
 
                     });
@@ -438,17 +525,26 @@ function distance(pt1, pt2) {
 
 
 function annulerAnnotation() {
-    var children = layer.getChildren();
-    var last = children[children.length-1];
-    if(last.getClassName() == 'Line'){
-        last.points().pop();
-        last.points().pop();
-        if(last.points().length == 2)
+    if(modeCanvas != 4) {
+        var children = layer.getChildren();
+        var last = children[children.length - 1];
+        if (last.getClassName() == 'Arc') {
+            var lines = layer.getChildren(function (node) {
+                return node.getClassName() === 'Line'
+            });
+            var line = lines[lines.length - 1];
+            line.points().pop();
+            line.points().pop();
             children.pop();
-    } else {
-        children.pop();
+            if (line.points().length == 2 && modeCanvas != 1 && modeCanvas != 3) {
+                children.pop();
+                children.pop();
+            }
+        } else {
+            children.pop();
+        }
+        layer.draw();
     }
-    layer.draw();
 }
 
 
@@ -457,6 +553,7 @@ function boutonsOff() {
     document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnSupprImage').className = "btn btn-outline-dark btn-rounded btn-lg";
+    document.getElementById('btnCorrectionn').className = "btn btn-outline-dark btn-rounded btn-lg";
     nbPoints = 0;
 }
 
@@ -468,15 +565,17 @@ function createDot(x, y, idCircle) {
         angle: 360,
         stroke: 'red',
         strokeWidth: 2,
-        draggable: true,
         id: idCircle,
     });
     circle.on('dragmove', function () {
         boutonsOff();
-        modeCanvas = 0;
         var pos = stage.getPointerPosition();
         var posx =  pos.x;
         var posy =  pos.y;
+        posx -= stage.x();
+        posy -= stage.y();
+        posx = posx/niveauZoom;
+        posy = posy/niveauZoom;
 
         var id = this.attrs['id'];
 
@@ -490,7 +589,29 @@ function createDot(x, y, idCircle) {
     });
     layer.add(circle);
     layer.draw();
+}
 
+function maskArcs() {
+    var arcs = layer.getChildren(function (node) {
+        return node.getClassName() === 'Arc';
+    });
+
+    arcs.hide();
+}
+
+function showArcs() {
+    var arcs = layer.getChildren(function (node) {
+        return node.getClassName() === 'Arc';
+    });
+
+    arcs.show();
+    layer.draw();
 }
 
 
+function extractFromVideo() {
+
+    var canvas = document.getElementById('canvas');
+
+
+}
