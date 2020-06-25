@@ -156,7 +156,8 @@ function init() {
             var layerBkg = stage.getLayers()[0];
             layerBkg.scale({x: niveauZoom, y: niveauZoom});
             layer.scale({x: niveauZoom, y: niveauZoom});
-            stage.draggable(true);
+            if(modeCanvas != 4)
+                stage.draggable(true);
             stage.dragBoundFunc(function (pos) {
                 var newX;
                 var newY;
@@ -565,55 +566,23 @@ function createDot(x, y, idCircle) {
     circle.attrs['x'] = x;
     circle.attrs['y'] = y;
     circle.on('dragstart', function () {
-        let pos = stage.getPointerPosition();
-        oldPos[0] =  pos.x;
-        oldPos[1] =  pos.y;
-
-        let id = this.attrs['id'];
-
-        let ligne = parseInt(id.split('-')[0]);
-        let points = parseInt(id.split('-')[1]);
-        let lines = layer.getChildren(function(node){
-            return node.getClassName() === 'Line';
-        });
-
-
-        ecartArcLigne = [[this.attrs['x'] - lines[ligne].attrs['x']], this.attrs['y'] - lines[ligne].attrs['y']];
-
+        oldPos[0] =  this.x();
+        oldPos[1] =  this.y();
     });
     circle.on('dragmove', function () {
-        // boutonsOff();
-        let pos = stage.getPointerPosition();
-        let posx =  pos.x - ecartArcLigne[0];
-        let posy =  pos.y - ecartArcLigne[1];
-
-        let ecartPos = [pos.x - oldPos[0], posy - oldPos[1]];
-
-        // let diffX = this.attrs['x'] - oldPos[0];
-        // let diffY = this.attrs['y'] - oldPos[1];
-        // // posx -= diffX;
-        // // posy -= diffY;
-        //
-        // posx -= stage.x();
-        // posy -= stage.y();
-        // posx = posx/niveauZoom;
-        // posy = posy/niveauZoom;
-
-        ecartPos[0] -= stage.x();
-        ecartPos[1] -= stage.y();
-
+        let diffX = this.x() - oldPos[0];
+        let diffY = this.y() - oldPos[1];
         let id = this.attrs['id'];
-
         let ligne = parseInt(id.split('-')[0]);
         let points = parseInt(id.split('-')[1]);
         let lines = layer.getChildren(function(node){
             return node.getClassName() === 'Line';
         });
-        ecartArcLigne = [this.attrs['x'] - lines[ligne].attrs['x'], this.attrs['y'] - lines[ligne].attrs['y']];
-        console.log("ligne : " + lines[ligne].points()[2*points] + " " + lines[ligne].points()[2*points+1]);
-        console.log("cercle : " + this.attrs['x'] + " " + this.attrs['y']);
-        lines[ligne].points()[2*points] = pos.x;// - ecartArcLigne[0];
-        lines[ligne].points()[2*points+1] = pos.y;// - ecartArcLigne[1];
+
+        lines[ligne].points()[2*points] += diffX;
+        lines[ligne].points()[2*points+1] += diffY;
+        oldPos[0] = this.x();
+        oldPos[1] = this.y();
     });
     layer.add(circle);
     layer.draw();
@@ -918,18 +887,16 @@ function creerLigne(ptsLigne) {
         id: nbElem,
     });
     poly.on('dragstart', function () {
-        let pos = stage.getPointerPosition();
+        // let pos = stage.getPointerPosition();
         oldPos[0] =  this.x();
         oldPos[1] =  this.y();
-        console.log(oldPos);
-
     });
     poly.on('dragend', function () {
         let circles = layer.getChildren(function(node){
             return node.getClassName() === 'Arc';
         });
         let idLigne = this.attrs['id'];
-        let pos = stage.getPointerPosition();
+        // let pos = stage.getPointerPosition();
         let diffX = this.x() - oldPos[0];
         let diffY = this.y() - oldPos[1];
         circles = circles.filter(circle => circle.attrs['id'].split('-')[0] == idLigne);
