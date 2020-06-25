@@ -18,7 +18,8 @@ var ptsLigne;
 var poly;
 var layer;
 var nbElem;
-var oldPos;
+var oldPos = [];
+var ecartArcLigne = [];
 var ellipseCliquee = 0;
 var niveauZoom =1;
 var initialPosStage;
@@ -83,14 +84,16 @@ function init() {
             document.getElementById('btnCorrectionn').className = "btn btn-outline-dark btn-rounded btn-lg";
             if(niveauZoom != 1)
                 stage.draggable(true);
-            for(var shape in layer.getChildren()) {
-                shape.draggable(false);
+            for(var i = 0; i < layer.getChildren().length; ++i) {
+                layer.getChildren()[i].draggable(false);
             }
             ellipseCliquee = 0;
             var trns = layer.getChildren(function (node) {
                 return node.getClassName() === 'Transformer';
             })[0];
-            trns.destroy();
+            if(trns){
+                trns.destroy();
+            }
             layer.draw();
 
         }else{
@@ -556,25 +559,61 @@ function createDot(x, y, idCircle) {
         strokeWidth: 2,
         id: idCircle,
     });
-    circle.on('dragmove', function () {
-        boutonsOff();
-        var pos = stage.getPointerPosition();
-        var posx =  pos.x;
-        var posy =  pos.y;
-        posx -= stage.x();
-        posy -= stage.y();
-        posx = posx/niveauZoom;
-        posy = posy/niveauZoom;
+    if(modeCanvas == 4) {
+        circle.draggable(true);
+    }
+    circle.attrs['x'] = x;
+    circle.attrs['y'] = y;
+    circle.on('dragstart', function () {
+        let pos = stage.getPointerPosition();
+        oldPos[0] =  pos.x;
+        oldPos[1] =  pos.y;
 
-        var id = this.attrs['id'];
+        let id = this.attrs['id'];
 
-        var ligne = parseInt(id.split('-')[0]);
-        var points = parseInt(id.split('-')[1]);
-        var lines = layer.getChildren(function(node){
+        let ligne = parseInt(id.split('-')[0]);
+        let points = parseInt(id.split('-')[1]);
+        let lines = layer.getChildren(function(node){
             return node.getClassName() === 'Line';
         });
-        lines[ligne].points()[2*points] = posx;
-        lines[ligne].points()[2*points+1] = posy;
+
+
+        ecartArcLigne = [[this.attrs['x'] - lines[ligne].attrs['x']], this.attrs['y'] - lines[ligne].attrs['y']];
+
+    });
+    circle.on('dragmove', function () {
+        // boutonsOff();
+        let pos = stage.getPointerPosition();
+        let posx =  pos.x - ecartArcLigne[0];
+        let posy =  pos.y - ecartArcLigne[1];
+
+        let ecartPos = [pos.x - oldPos[0], posy - oldPos[1]];
+
+        // let diffX = this.attrs['x'] - oldPos[0];
+        // let diffY = this.attrs['y'] - oldPos[1];
+        // // posx -= diffX;
+        // // posy -= diffY;
+        //
+        // posx -= stage.x();
+        // posy -= stage.y();
+        // posx = posx/niveauZoom;
+        // posy = posy/niveauZoom;
+
+        ecartPos[0] -= stage.x();
+        ecartPos[1] -= stage.y();
+
+        let id = this.attrs['id'];
+
+        let ligne = parseInt(id.split('-')[0]);
+        let points = parseInt(id.split('-')[1]);
+        let lines = layer.getChildren(function(node){
+            return node.getClassName() === 'Line';
+        });
+        ecartArcLigne = [this.attrs['x'] - lines[ligne].attrs['x'], this.attrs['y'] - lines[ligne].attrs['y']];
+        console.log("ligne : " + lines[ligne].points()[2*points] + " " + lines[ligne].points()[2*points+1]);
+        console.log("cercle : " + this.attrs['x'] + " " + this.attrs['y']);
+        lines[ligne].points()[2*points] = pos.x;// - ecartArcLigne[0];
+        lines[ligne].points()[2*points+1] = pos.y;// - ecartArcLigne[1];
     });
     layer.add(circle);
     layer.draw();
@@ -596,7 +635,6 @@ function showArcs() {
     arcs.show();
     layer.draw();
 }
-
 
 function extractFromVideo() {
     $("body").append("<input type='file' id='explorerChargementVideo' accept='video/*'>");
@@ -639,7 +677,6 @@ function loadVideo(e1) {
     fr.readAsDataURL(vid);
 }
 
-
 function videoHandler(e2) {
     video.src = e2.target.result;
     video.muted = true;
@@ -666,7 +703,6 @@ function computeFrame() {
     }
     nbFrame++;
 }
-
 
 function imagedata_to_image(imagedata) {
     var canvas = document.createElement('canvas');
@@ -712,7 +748,7 @@ function masqueHandler(e2) {
     var data = ctx.getImageData(0,0,canvas.width, canvas.height).data;
     var ptsAnnotations = [];
     var k;
-    
+
 
     if(data.find(element => element == 255)) {
         for (var i = 0; i < canvas.height; ++i) {
@@ -727,19 +763,24 @@ function masqueHandler(e2) {
                         let longueurPtsAnnotK = ptsAnnotations[k].length;
                         if(ligne[0][0]-1 == ptsAnnotations[k][0][0] || ligne[0][0]-1 == ptsAnnotations[k][longueurPtsAnnotK-1][0]) {
                             if(ligne[0][1] == ptsAnnotations[k][0][1] && ligne[1][1] == ptsAnnotations[k][longueurPtsAnnotK-1][1]) {
+                                //ligne de fermeture de la forme
                                 ptsAnnotations[k] = ligne.reverse().concat(ptsAnnotations[k]);
                                 // ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
                             } else if(ligne[0][1] < ptsAnnotations[k][0][1] && ligne[1][1]+1 <= ptsAnnotations[k][1][1]) {
+                                //debut de l'annotation entre le début et la fin de la ligne a ajouter
                                 ptsAnnotations[k] = ligne.concat(ptsAnnotations[k]);
                                 place = true;
                             } else if(ligne[0][1]-1 <= ptsAnnotations[k][longueurPtsAnnotK-2][1] && ligne[1][1] > ptsAnnotations[k][longueurPtsAnnotK-1][1]) {
+                                //fin  de l'annotation entre le début et la fin de la ligne a ajouter
                                 ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
-                            } else if(sontEnvironEgales(ligne[1][0], ptsAnnotations[k][longueurPtsAnnotK - 1][0])) {
+                            } else if(ligne[0][0] - 1 <= ptsAnnotations[k][0][1]) {
+                                //ligne au début de l'annotation
                                 ptsAnnotations[k] = ligne.concat(ptsAnnotations[k]);
                                 place = true;
-                            } else if(sontEnvironEgales(ligne[1][1], ptsAnnotations[k][longueurPtsAnnotK - 1][1])) {
+                            } else if(ligne[1][1] + 1 >=  ptsAnnotations[k][longueurPtsAnnotK - 1][1]) {
+                                //ligne à la fin de l'annotation
                                 ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
                             }
@@ -750,73 +791,10 @@ function masqueHandler(e2) {
                     if(!place) {
                         ptsAnnotations.push(ligne);
                     }
-
-                    /*
-                    var place = false;
-                    var a = 0;
-                    k = 0;
-
-                    var temp = [[i, j]];
-                    var val = undefined;
-                    while (j < canvas.width && data.data[(i * canvas.width + j) * 4] != 0) {
-                        ++j;
-                        temp.push([i, j]);
-                    }
-                    var nbLigne = getNbLignes(temp, canvas, data);
-                    if (nbLigne > 1) {
-                        temp = creerMultiligne(temp, nbLigne);
-                    }
-                    let line = new Ligne(temp);
-                    while (!place && k < ptsAnnotations.length) {
-                        // var deb = ptsAnnotations[k].getDeb();
-                        // var fin = ptsAnnotations[k].getFin();
-                        // //Si le debut et la fin de l'annotation correspond aux extremites de temp
-                        // if ((temp[0] === deb && temp[temp.length - 1] === fin)) {
-                        //     place = true;
-                        // } //else {
-                        //     if (deb[0] === temp[0][0] - 1 && deb[1] >= temp[0][1] && deb[1] <= temp[temp.length - 1][1]) {
-                        //         val = deb[1] - temp[0][1];
-                        //     } else if (fin[0] === temp[0][0] - 1 && fin[1] >= temp[0][1] && fin[1] <= temp[temp.length - 1][1]) {
-                        //         val = -(deb[1] - temp[0][1]);
-                        //     }
-                        //     if (val != undefined) {
-                        //         if (val >= 0) {
-                        //             ptsAnnotations[k] = temp.slice(0, val).concat(ptsAnnotations[k]);
-                        //             for (let t = val; t < temp.length; ++t) {
-                        //                 insererEnPos(ptsAnnotations[k], temp[t], 2 * t + val);
-                        //             }
-                        //         } else {
-                        //             for (let t = -val; t > -1; --t) {
-                        //                 insererEnPos(ptsAnnotations[k], temp[-val - t], ptsAnnotations[k].length - 1 - t)
-                        //             }
-                        //             ptsAnnotations[k] = ptsAnnotations[k].concat(temp.slice(val))
-                        //         }
-                        //         place = true;
-                        //     } else {
-                        //         if (sontVoisins(temp[temp.length - 1], ptsAnnotations[k][0])) {
-                        //             ptsAnnotations[k] = temp.concat(ptsAnnotations[k]);
-                        //         } else if (sontVoisins(temp[0], ptsAnnotations[k][ptsAnnotations[k].length - 1])) {
-                        //             ptsAnnotations[k] = ptsAnnotations[k].concat(temp);
-                        //         }
-                        //     }
-                        place = ptsAnnotations[k].merge(line)
-                        ++k;
-                        // }
-                    }
-                    if (!place) {
-                        ptsAnnotations.push(line);
-                    }*/
                 }
             }
         }
         document.getElementById('canvasMasque').remove();
-
-        // ptsAnnotations = concatAnnotations(ptsAnnotations);
-        // for (k = 0; k < ptsAnnotations.length; ++k) {
-        //     for(let l = k+1; l < ptsAnnotations.length; ++l) {
-        //         ptsAnnotations[k].merge(ptsAnnotations[l]);
-        //     }
-        // }
 
         var bonsPoints;
         for (i = 0; i < ptsAnnotations.length; ++i) {
@@ -939,24 +917,25 @@ function creerLigne(ptsLigne) {
         strokeWidth: 1,
         id: nbElem,
     });
+    poly.on('dragstart', function () {
+        let pos = stage.getPointerPosition();
+        oldPos[0] =  this.x();
+        oldPos[1] =  this.y();
+        console.log(oldPos);
+
+    });
     poly.on('dragend', function () {
-        var circles = layer.getChildren(function(node){
+        let circles = layer.getChildren(function(node){
             return node.getClassName() === 'Arc';
         });
-        var idLigne = this.attrs['id'];
-        var diffX = this.attrs['x']  - oldPos[0];
-        var diffY = this.attrs['y'] - oldPos[1];
-
-        this.attrs['x'] = oldPos[0];
-        this.attrs['y'] = oldPos[1];
-        circles = circles.filter(circle => circle.attrs['id'].split('-')[0] === idLigne);
-
-        while(circles.length != 0) {
-            circles.shift().destroy();
-        }
-        for(i = 0; i< this.points().length; ++i) {
-            var idCircle = this.attrs['id']+'-'+i;
-            createDot(this.points()[i]+diffX, this.points()[++i]+diffY, idCircle);
+        let idLigne = this.attrs['id'];
+        let pos = stage.getPointerPosition();
+        let diffX = this.x() - oldPos[0];
+        let diffY = this.y() - oldPos[1];
+        circles = circles.filter(circle => circle.attrs['id'].split('-')[0] == idLigne);
+        for(let i = 0; i < circles.length; ++i) {
+            circles[i].x(circles[i].x() + diffX);
+            circles[i].y(circles[i].y() + diffY);
         }
         layer.draw();
     });
