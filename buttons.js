@@ -33,7 +33,8 @@ var chargementVideo = false;
 var hauteurInference = 270;
 var largeurInference = 480;
 var rapportImageInference;
-var ecartPointsImportants = 20;
+var ecartPointsImportants = 5;
+var lignesSuppr = [];
 
 var modeCanvas = 0;
 /*
@@ -575,60 +576,6 @@ function boutonsOff() {
     nbPoints = 0;
 }
 
-function createDot(x, y, idCircle) {
-    var circle = new Konva.Arc({
-        x: x,
-        y: y,
-        outerRadius: 4,
-        angle: 360,
-        stroke: 'red',
-        strokeWidth: 2,
-        id: idCircle,
-    });
-    if(modeCanvas == 4) {
-        circle.draggable(true);
-    }
-    circle.attrs['x'] = x;
-    circle.attrs['y'] = y;
-    circle.on('dragstart', function () {
-        oldPos[0] =  this.x();
-        oldPos[1] =  this.y();
-    });
-    circle.on('dragmove', function () {
-        let diffX = this.x() - oldPos[0];
-        let diffY = this.y() - oldPos[1];
-        let id = this.attrs['id'];
-        let ligne = parseInt(id.split('-')[0]);
-        let points = parseInt(id.split('-')[1]);
-        let lines = layer.getChildren(function(node){
-            return node.getClassName() === 'Line';
-        });
-
-        lines[ligne].points()[2*points] += diffX;
-        lines[ligne].points()[2*points+1] += diffY;
-        oldPos[0] = this.x();
-        oldPos[1] = this.y();
-    });
-    circle.on('click', function () {
-        if( modeCanvas === 5) {
-            this.destroy();
-            let id = this.attrs['id'];
-            let ligne = parseInt(id.split('-')[0]);
-            let points = parseInt(id.split('-')[1]);
-            let lines = layer.getChildren(function(node){
-                return node.getClassName() === 'Line';
-            });
-
-            lines[ligne].points().splice(2*points, 2);
-            layer.draw();
-            boutonsOff();
-            modeCanvas = 0;
-        }
-    });
-    layer.add(circle);
-    layer.draw();
-}
-
 function maskArcs() {
     var arcs = layer.getChildren(function (node) {
         return node.getClassName() === 'Arc';
@@ -797,6 +744,14 @@ function masqueHandler(e2) {
                                 //ligne à la fin de l'annotation
                                 ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
+                            } else if(ligne[1][1] + 1 >=  ptsAnnotations[k][longueurPtsAnnotK - 2][1]) {
+                                //fin de ligne au début de la fin de l'annotation
+                                ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
+                                place = true;
+                            } else if(ligne[0][1] - 1 <=  ptsAnnotations[k][1][1]) {
+                                //début de ligne à la fin du début de l'annotation
+                                ptsAnnotations[k] = ligne.concat(ptsAnnotations[k]);
+                                place = true;
                             } else {
                                 console.log("i : " + i + " j : " +j);
                                 ++k;
@@ -926,12 +881,72 @@ function pointsImportants(ligne) {
     return points;
 }
 
+function createDot(x, y, idCircle) {
+    var circle = new Konva.Arc({
+        x: x,
+        y: y,
+        outerRadius: 4,
+        angle: 360,
+        stroke: 'red',
+        strokeWidth: 2,
+        id: idCircle,
+    });
+    if(modeCanvas == 4) {
+        circle.draggable(true);
+    }
+    circle.attrs['x'] = x;
+    circle.attrs['y'] = y;
+    circle.on('dragstart', function () {
+        oldPos[0] =  this.x();
+        oldPos[1] =  this.y();
+    });
+    circle.on('dragmove', function () {
+        let diffX = this.x() - oldPos[0];
+        let diffY = this.y() - oldPos[1];
+        let id = this.attrs['id'];
+        let ligne = parseInt(id.split('-')[0]);
+        let points = parseInt(id.split('-')[1]);
+        let lines = layer.getChildren(function(node){
+            return node.getClassName() === 'Line';
+        });
+        let diffLigne = 0;
+        for(let i = 0; i < lignesSuppr.length; ++i) {
+            if(lignesSuppr[i] < ligne) {
+                ++diffLigne;
+            }
+        }
+        ligne -= diffLigne;
+        lines[ligne].points()[2*points] += diffX;
+        lines[ligne].points()[2*points+1] += diffY;
+        oldPos[0] = this.x();
+        oldPos[1] = this.y();
+    });
+    circle.on('click', function () {
+        if( modeCanvas === 5) {
+            this.destroy();
+            let id = this.attrs['id'];
+            let ligne = parseInt(id.split('-')[0]);
+            let points = parseInt(id.split('-')[1]);
+            let lines = layer.getChildren(function(node){
+                return node.getClassName() === 'Line';
+            });
+
+            lines[ligne].points().splice(2*points, 2);
+            layer.draw();
+            boutonsOff();
+            modeCanvas = 0;
+        }
+    });
+    layer.add(circle);
+    layer.draw();
+}
+
 function creerLigne(ptsLigne) {
     var poly = new Konva.Line({
         points: ptsLigne,
-        stroke: 'blue',
-        strokeWidth: 1,
-        id: nbElem,
+        stroke: 'red',
+        strokeWidth: 3,
+        id: nbElem + lignesSuppr,
     });
     ++nbElem;
     poly.on('dragstart', function () {
@@ -956,6 +971,15 @@ function creerLigne(ptsLigne) {
     });
     poly.on('click', function () {
         if( modeCanvas === 5) {
+            let circles = layer.getChildren(function(node){
+                return node.getClassName() === 'Arc';
+            });
+            let idLigne = this.attrs['id'];
+            circles = circles.filter(circle => circle.attrs['id'].split('-')[0] == idLigne);
+            for(let i = circles.length-1; i >= 0; --i) {
+                circles[i].destroy();
+            }
+            lignesSuppr.push(idLigne);
             this.destroy();
             layer.draw();
             boutonsOff();
