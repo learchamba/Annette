@@ -33,7 +33,7 @@ var chargementVideo = false;
 var hauteurInference = 270;
 var largeurInference = 480;
 var rapportImageInference;
-var ecartPointsImportants = 5;
+var ecartPointsImportants = 15;
 var lignesSuppr = [];
 
 var modeCanvas = 0;
@@ -289,6 +289,7 @@ function init() {
             });
     }
     nbElem = 0;
+    initRaccourcis();
 }
 
 function load1Picture() {
@@ -530,6 +531,45 @@ function initCanvas() {
                 console.log("bla");
         }
     })
+}
+
+function initRaccourcis() {
+    let isC = false;
+    $(document).keyup(function (e) {
+        if(e.which == 67)
+            isC=false;
+        }).keydown(function (e) {
+        if(e.which == 67)  {
+            document.getElementById('btnCorrectionn').click();
+            return false;
+        }
+    });
+
+
+    let isS = false;
+    $(document).keyup(function (e) {
+        if(e.which == 83)
+            isS=false;
+        }).keydown(function (e) {
+        if(e.which == 83)  {
+            document.getElementById('btnSupprAnnotation').click();
+            return false;
+        }
+    });
+
+    let isCtrl = false;
+    $(document).keyup(function (e) {
+        if(e.which == 17)
+            isCtrl=false;
+        }).keydown(function (e) {
+            if(e.which == 17)
+                isCtrl=true;
+            if(e.which == 83 && isCtrl == true) {
+            document.getElementById('btnValider').click();
+            document.getElementById('btnSupprAnnotation').click();
+            return false;
+        }
+    });
 }
 
 function downloadimage() {
