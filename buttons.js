@@ -33,7 +33,7 @@ var chargementVideo = false;
 var hauteurInference = 270;
 var largeurInference = 480;
 var rapportImageInference;
-var ecartPointsImportants = 15;
+var ecartPointsImportants = 10;
 var lignesSuppr = [];
 
 var modeCanvas = 0;
@@ -271,6 +271,8 @@ function init() {
         document.getElementById("imageL"+i).addEventListener('dblclick', function (e) {
             document.getElementById('imageCourante').src = e.target.src;
             indiceImageCourante = debutListe + parseInt(e.target.id.charAt(e.target.id.length-1));
+            nbElem = 0;
+
             chargerMasque();
         });
         document.getElementById("imageL"+i).addEventListener('click',
@@ -534,6 +536,14 @@ function initCanvas() {
 }
 
 function initRaccourcis() {
+/* Raccourcis existants
+ * c : mode correction
+ * s : mode suppression
+ * m : masquer les annotations
+ * ctrl + s : valider l'annotation
+ * ctrl + z : annuler la dernière annotation
+*/
+
     let isC = false;
     $(document).keyup(function (e) {
         if(e.which == 67)
@@ -557,6 +567,17 @@ function initRaccourcis() {
         }
     });
 
+    let isM = false;
+    $(document).keyup(function (e) {
+        if(e.which == 77)
+            isM=false;
+        }).keydown(function (e) {
+        if(e.which == 77)  {
+            document.getElementById('btnMasquer').click();
+            return false;
+        }
+    });
+
     let isCtrl = false;
     $(document).keyup(function (e) {
         if(e.which == 17)
@@ -567,6 +588,19 @@ function initRaccourcis() {
             if(e.which == 83 && isCtrl == true) {
             document.getElementById('btnValider').click();
             document.getElementById('btnSupprAnnotation').click();
+            return false;
+        }
+    });
+
+    isCtrl = false;
+    $(document).keyup(function (e) {
+        if(e.which == 17)
+            isCtrl=false;
+        }).keydown(function (e) {
+            if(e.which == 17)
+                isCtrl=true;
+            if(e.which == 90 && isCtrl == true) {
+            document.getElementById('btnAnnuler').click();
             return false;
         }
     });
@@ -613,6 +647,22 @@ function boutonsOff() {
     document.getElementById('btnSupprImage').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnCorrectionn').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnSupprAnnotation').className = "btn btn-outline-dark btn-rounded btn-lg";
+
+    if(modeCanvas === 4) {
+        if(niveauZoom != 1)
+            stage.draggable(true);
+        for(var i = 0; i < layer.getChildren().length; ++i) {
+            layer.getChildren()[i].draggable(false);
+        }
+        ellipseCliquee = 0;
+        var trns = layer.getChildren(function (node) {
+            return node.getClassName() === 'Transformer';
+        })[0];
+        if(trns){
+            trns.destroy();
+        }
+        layer.draw();
+    }
     nbPoints = 0;
 }
 
@@ -713,6 +763,23 @@ function imagedata_to_image(imagedata) {
     return image;
 }
 
+function isBlack(data, i ,j, canvas) {
+    ret = true;
+    let indice = (i * canvas.width + j) * 4;
+    if(data[indice] != 0) {
+        //R
+        ret = false;
+    } else if(data[indice+1] != 0) {
+        //G
+        ret = false;
+    } else if(data[indice+2] != 0) {
+        //B
+        ret = false;
+    }
+    return ret;
+}
+
+//Gestion du masque
 function chargerMasque() {
 
     $("body").append("<input type='file' id='explorerMasque' accept='image/*' multiple>");
@@ -746,11 +813,13 @@ function masqueHandler(e2) {
     var ptsAnnotations = [];
     var k;
 
+    ecartPointsImportants = parseInt(document.getElementById('inputCoef').value);
+
 
     if(data.find(element => element == 255)) {
         for (var i = 0; i < canvas.height; ++i) {
             for (var j = 0; j < canvas.width; ++j) {
-                if (data[(i * canvas.width + j) * 4] != 0) {
+                if (!isBlack(data, i, j, canvas) != 0) {
                     let place = false;
                     let ligne = getExtremitesLigne(data, i, j);
                     j = ligne[1][1] + 1;
@@ -764,36 +833,52 @@ function masqueHandler(e2) {
                                 ptsAnnotations[k] = ligne.reverse().concat(ptsAnnotations[k]);
                                 // ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
-                            } else if(ligne[0][1] < ptsAnnotations[k][0][1] //deb2 < deb 1
+                            } else if(ligne[1][0] -1 == ptsAnnotations[k][0][0]
+                                && ligne[0][1] < ptsAnnotations[k][0][1] //deb2 < deb 1
                                 && ligne[1][1] >= ptsAnnotations[k][0][1] - 1 // fin2 >= deb1 -1
                                 && ligne[1][1]+1 <= ptsAnnotations[k][1][1]) { // fin2 < fin 1
                                 //debut de l'annotation entre le début et la fin de la ligne a ajouter
                                 ptsAnnotations[k] = ligne.concat(ptsAnnotations[k]);
                                 place = true;
-                            } else if(ligne[0][1] > ptsAnnotations[k][0][1] //deb2 > deb1
-                                && ligne[0][1]-1 <= ptsAnnotations[k][longueurPtsAnnotK-2][1] //deb2-1 <= fin1
-                                && ligne[1][1] > ptsAnnotations[k][longueurPtsAnnotK-1][1]) { // fin2 >= fin1
+                            } else if(ligne[1][0] -1 == ptsAnnotations[k][longueurPtsAnnotK - 1][0]
+                                && ligne[0][1] > ptsAnnotations[k][0][1] //deb2 > deb1
+                                && ligne[0][1]-1 <= ptsAnnotations[k][longueurPtsAnnotK - 2][1] //deb2-1 <= fin1
+                                && ligne[1][1] > ptsAnnotations[k][longueurPtsAnnotK - 1][1]) { // fin2 >= fin1
                                 //fin  de l'annotation entre le début et la fin de la ligne a ajouter
                                 ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
-                            } else if(ligne[0][1] - 1 <= ptsAnnotations[k][0][1]) {
+                            } else if(ligne[1][0] -1 == ptsAnnotations[k][0][0]
+                                && sontEnvironEgales(ligne[1][1], ptsAnnotations[k][0][1])) {
                                 //ligne au début de l'annotation
                                 ptsAnnotations[k] = ligne.concat(ptsAnnotations[k]);
                                 place = true;
-                            } else if(ligne[1][1] + 1 >=  ptsAnnotations[k][longueurPtsAnnotK - 1][1]) {
+                            } else if(ligne[1][0] -1 == ptsAnnotations[k][longueurPtsAnnotK - 1][0]
+                                && ligne[1][1] + 1 >= ptsAnnotations[k][longueurPtsAnnotK - 1][1]
+                                && ligne[0][1] - 1 <= ptsAnnotations[k][longueurPtsAnnotK - 1][1]) {
                                 //ligne à la fin de l'annotation
                                 ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
-                            } else if(ligne[1][1] + 1 >=  ptsAnnotations[k][longueurPtsAnnotK - 2][1]) {
+                            } else if(ligne[1][0] -1 == ptsAnnotations[k][longueurPtsAnnotK - 1][0]
+                                && ligne[1][1] + 1 >= ptsAnnotations[k][longueurPtsAnnotK - 2][1]
+                                && ligne[0][1] - 1 <= ptsAnnotations[k][longueurPtsAnnotK - 1][1]) {
                                 //fin de ligne au début de la fin de l'annotation
-                                ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
+                                ptsAnnotations[k] = ptsAnnotations[k].concat(ligne.reverse());
                                 place = true;
-                            } else if(ligne[0][1] - 1 <=  ptsAnnotations[k][1][1]) {
+                            } else if(ligne[1][0] -1 == ptsAnnotations[k][0][0]
+                                && ligne[0][1] - 1 <=  ptsAnnotations[k][1][1]
+                                && ligne[0][1] >=  ptsAnnotations[k][0][1]) {
                                 //début de ligne à la fin du début de l'annotation
                                 ptsAnnotations[k] = ligne.concat(ptsAnnotations[k]);
                                 place = true;
+                            } else if (ligne[1][0] -1 == ptsAnnotations[k][0][0]
+                                && ligne[0][1] == ptsAnnotations[k][0][1]
+                                && ligne[1][1] == ptsAnnotations[k][1][1]) {
+                                //ligne égale au début de l'annotations
+                                ptsAnnotations[k] = ligne.concat(ptsAnnotations[k]);
+                                place = true;
                             } else {
-                                console.log("i : " + i + " j : " +j);
+                                let tmp = j-1;
+                                console.log("i : " + i + " j : " + tmp);
                                 ++k;
                             }
                             if(place) {
@@ -858,11 +943,6 @@ function sontVoisins(p1, p2) {
     if(sontEnvironEgales(p1[0], p2[0]) && sontEnvironEgales(p1[1], p2[1])) {
         ret = true;
     }
-    // if(p1[0] === p2[0]-1 || p1[0] === p2[0] || p1[0] === p2[0]+1) {
-    //     if(p1[1] === p2[1]-1 || p1[1] === p2[1] || p1[1] === p2[1]+1) {
-    //         ret = true;
-    //     }
-    // }
     return ret;
 }
 
@@ -872,16 +952,17 @@ function concatAnnotations(ptsAnnot) {
         var l = k+1;
         while ( l < ptsAnnot.length) {
             if(sontVoisins(ptsAnnot[k][0], ptsAnnot[l][0])) {
-                ptsAnnot[k].reverse().concat(ptsAnnot[l]);
+                ptsAnnot[k] = ptsAnnot[l].reverse().concat(ptsAnnot[k]);
                 ptsAnnot.splice(l, 1);
             } else if(sontVoisins(ptsAnnot[k][0], ptsAnnot[l][ptsAnnot[l].length-1])) {
-                ptsAnnot[k].reverse().concat(ptsAnnot[l].reverse());
+                ptsAnnot[k] = ptsAnnot[l].concat(ptsAnnot[k]);
+                // ptsAnnot[k] = ptsAnnot[k].reverse().concat(ptsAnnot[l].reverse());
                 ptsAnnot.splice(l, 1);
             } else if(sontVoisins(ptsAnnot[k][ptsAnnot[k].length-1], ptsAnnot[l][0])) {
-                ptsAnnot[k].concat(ptsAnnot[l]);
+                ptsAnnot[k] = ptsAnnot[k].concat(ptsAnnot[l]);
                 ptsAnnot.splice(l, 1);
             } else if(sontVoisins(ptsAnnot[k][ptsAnnot[k].length-1], ptsAnnot[l][ptsAnnot[l].length-1])) {
-                ptsAnnot[k].concat(ptsAnnot[l].reverse());
+                ptsAnnot[k] = ptsAnnot[k].concat(ptsAnnot[l].reverse());
                 ptsAnnot.splice(l, 1);
             } else {
                 ++l;
@@ -904,6 +985,7 @@ function pointsImportants(ligne) {
     var ptsAnnot = ligne;
     var points = [ptsAnnot[0]];
     var last = ptsAnnot.length-1;
+    let ecartPente = 0.2;
 
     for(let i = 1; i < ptsAnnot.length-1; ++i) {
         if(ptsAnnot[i][0] == ptsAnnot[i-1][0] && ptsAnnot[i][1] == ptsAnnot[i-1][1]) {
@@ -914,13 +996,27 @@ function pointsImportants(ligne) {
     for(var i = ecartPointsImportants; i < last-ecartPointsImportants; i+=ecartPointsImportants) {
         if (!(ptsAnnot[i][0] - ptsAnnot[i-ecartPointsImportants][0] == ptsAnnot[i+ecartPointsImportants][0] - ptsAnnot[i][0]
             && ptsAnnot[i][1] - ptsAnnot[i-ecartPointsImportants][1] == ptsAnnot[i+ecartPointsImportants][1] - ptsAnnot[i][1])) {
+                //S'il y a un écart
+                // let rapportI = ptsAnnot[i][0] - ptsAnnot[i-ecartPointsImportants][0] / ptsAnnot[i+ecartPointsImportants][0] - ptsAnnot[i][0];
+                // let rapportJ = ptsAnnot[i][1] - ptsAnnot[i-ecartPointsImportants][1] / ptsAnnot[i+ecartPointsImportants][1] - ptsAnnot[i][1]);
+            let penteDeb = ptsAnnot[i][0] - ptsAnnot[i - ecartPointsImportants][0] / ptsAnnot[i][1] - ptsAnnot[i - ecartPointsImportants][1];
+            let penteFin = ptsAnnot[i + ecartPointsImportants][0] - ptsAnnot[i][0] / ptsAnnot[i + ecartPointsImportants][1] - ptsAnnot[i][1];
+            if(penteDeb / penteFin < 1 - ecartPente){
+                if(!pointsEgaux(points[points.length-1], ptsAnnot[i - Math.round(ecartPointsImportants/2)])) {
+                    points.push(ptsAnnot[i - Math.round(ecartPointsImportants/2)]);
+                }
+            }
             points.push(ptsAnnot[i]);
+            if (penteDeb / penteFin > 1 + ecartPente) {
+                points.push(ptsAnnot[i + Math.round(ecartPointsImportants/2)]);
+            }
         }
     }
     points.push(ptsAnnot[last]);
     return points;
 }
 
+//Création d'annotation
 function createDot(x, y, idCircle) {
     var circle = new Konva.Arc({
         x: x,
@@ -986,7 +1082,7 @@ function creerLigne(ptsLigne) {
         points: ptsLigne,
         stroke: 'red',
         strokeWidth: 3,
-        id: nbElem + lignesSuppr,
+        id: nbElem,
     });
     ++nbElem;
     poly.on('dragstart', function () {
@@ -1115,6 +1211,12 @@ function getExtremitesLigne(data, i, j) {
     return[[i,j], [i,k]];
 }
 
+function pointsEgaux(pt1, pt2) {
+    ret = false;
+    if(pt1[0] == pt2[0] && pt1[1] == pt2[1])
+        ret = true;
+    return ret;
+}
 
 class Ligne {
 
