@@ -146,13 +146,19 @@ function init() {
         // $("body").append("<a href='" + stage.toDataURL() + "' id='DLCanvas' download='annotation" + indiceImageCourante + ".jpg'>");
         maskArcs();
         var y = document.getElementById("DLCanvas");
-        y.href = stage.toDataURL();
-        showArcs();
-        y.download = 'annotation' + indiceImageCourante + '.png'
-
+        var wantType = "image/bmp";
+        var dataUri = stage.toCanvas().toDataURL(wantType);
+        if (dataUri.indexOf(wantType) < 0) {
+            y.href = stage.toDataURL('image/png');
+            y.download = 'annotation' + indiceImageCourante + '.png'
+        } else {
+            y.href = dataUri;
+            y.download = 'annotation' + indiceImageCourante + '.bmp'
+        }
         y.addEventListener('change', downloadimage, false);
         annotationsStockees = [];
         y.click();
+        showArcs();
     });
 
     document.getElementById('btnZoomPlus').addEventListener(('click'), function () {
@@ -394,13 +400,13 @@ function initCanvas() {
         e.preventDefault();
         switch(modeCanvas) {
             case 1:
-            nbPoints = 0;
-            break;
+                nbPoints = 0;
+                break;
             case 3:
-            nbPoints = 0;
-            break;
+                nbPoints = 0;
+                break;
             default:
-            console.log("bla");
+                console.log("bla");
         }
     })
 }
@@ -810,8 +816,6 @@ function masqueHandler(e2) {
     rapportImageInference = imageCourante.width / largeurInference;
     var img = new Image(largeurInference, hauteurInference);
     img.src = e2.target.result;
-    // img.height = hauteurInference;
-    // img.width = largeurInference;
     canvas.height = img.height;
     canvas.width = img.width;
     ctx = canvas.getContext('2d');
@@ -914,8 +918,8 @@ function masqueHandler(e2) {
                     modeCanvas = 1;
 
                 for(let j = 0; j < bonsPoints.length; ++j) {
-                    bonsPoints[j][0] = bonsPoints[j][0] * rapportImageInference;
-                    bonsPoints[j][1] = bonsPoints[j][1] * rapportImageInference;
+                    bonsPoints[j][0] = bonsPoints[j][0] * rapportImageInference;// + 1;
+                    bonsPoints[j][1] = bonsPoints[j][1] * rapportImageInference;// + 1;
                 }
 
                 let x = bonsPoints[0][1];
@@ -1097,6 +1101,23 @@ function createDot(x, y, idCircle) {
             boutonsOff();
             modeCanvas = 0;
         }
+    });
+
+    circle.on('contextMenu', function (e) {
+        e.preventDefault();
+        if( modeCanvas === 4) {
+            this.destroy();
+            let id = this.attrs['id'];
+            let ligne = parseInt(id.split('-')[0]);
+            let points = parseInt(id.split('-')[1]);
+            let lines = layer.getChildren(function(node){
+                return node.getClassName() === 'Line';
+            });
+
+            lines[ligne].points().splice(2*points, 2);
+            layer.draw();
+        }
+
     });
     layer.add(circle);
     layer.draw();
