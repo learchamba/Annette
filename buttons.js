@@ -169,34 +169,7 @@ function init() {
             layer.scale({x: niveauZoom, y: niveauZoom});
             if(modeCanvas != 4)
                 stage.draggable(true);
-            stage.dragBoundFunc(function (pos) {
-                var newX;
-                var newY;
-                if(pos.x > 0) {
-                    newX =0;
-                } else {
-                    if(pos.x < -stage.width()*(niveauZoom-1)) {
-                        newX = -stage.width()*(niveauZoom-1);
-                    } else {
-                        newX = pos.x;
-                    }
-                }
 
-                if(pos.y > 0) {
-                    newY =0;
-                } else {
-                    if(pos.y < -stage.height()*(niveauZoom-1)) {
-                        newY = -stage.height()*(niveauZoom-1);
-                    } else {
-                        newY = pos.y;
-                    }
-                }
-
-                return {
-                    x: newX,
-                    y: newY,
-                };
-            });
 
             layerBkg.draw();
             layer.draw();
@@ -253,6 +226,95 @@ function init() {
         layerBkgrd.draw();
         layer = new Konva.Layer();
         stage.add(layer);
+
+        var scaleBy = 1.05;
+
+        stage.dragBoundFunc(function (pos) {
+            var newX;
+            var newY;
+            if(pos.x > 0) {
+                newX = 0;
+            } else {
+                if(pos.x < -stage.width()*(niveauZoom-1)) {
+                    newX = -stage.width()*(niveauZoom-1);
+                } else {
+                    newX = pos.x;
+                }
+            }
+
+            if(pos.y > 0) {
+                newY = 0;
+            } else {
+                if(pos.y < -stage.height()*(niveauZoom-1)) {
+                    newY = -stage.height()*(niveauZoom-1);
+                } else {
+                    newY = pos.y;
+                }
+            }
+
+            console.log(newX, newY);
+            return {
+                x: newX,
+                y: newY,
+            };
+        });
+
+        stage.on('wheel', (e) => {
+            e.evt.preventDefault();
+            var oldScale = stage.scaleX();
+            var pointer = stage.getPointerPosition();
+            var mousePointTo = {
+            x: (pointer.x - stage.x()) / oldScale,
+            y: (pointer.y - stage.y()) / oldScale,
+            };
+            var newScale =
+            e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+            if(newScale >= 1 && newScale <= 8){
+                niveauZoom = newScale;
+                if(newScale == 1) {
+                    stage.draggable(false);
+                } else {
+                    stage.draggable(true);
+                }
+            }
+            stage.scale({ x: niveauZoom, y: niveauZoom });
+            var newPos = {
+            x: pointer.x - mousePointTo.x * niveauZoom,
+            y: pointer.y - mousePointTo.y * niveauZoom,
+            };
+            if(oldScale > newScale) {
+                let newX;
+                let newY;
+                let pos = newPos;
+                if(pos.x > 0) {
+                    newX = 0;
+                } else {
+                    if(pos.x < -stage.width()*(niveauZoom - 1)) {
+                        newX = -stage.width()*(niveauZoom - 1);
+                    }
+                }
+                if(newX != undefined) {
+                    stage.x(newX);
+                } else {
+                    stage.x(newPos.x);
+                }
+                if(pos.y > 0) {
+                    newY = 0;
+                } else {
+                    if(pos.y < -stage.height()*(niveauZoom - 1)) {
+                        newY = -stage.height()*(niveauZoom - 1);
+                    }
+                }
+                if(newY != undefined) {
+                    stage.y(newY);
+                } else {
+                    stage.y(newPos.y);
+                }
+            } else {
+                stage.position(newPos);
+            }
+            stage.batchDraw();
+        });
 
     }, false);
 
@@ -408,7 +470,8 @@ function initCanvas() {
             default:
                 console.log("bla");
         }
-    })
+    });
+
 }
 
 function initRaccourcis() {
@@ -889,7 +952,7 @@ function masqueHandler(e2) {
                                 place = true;
                             } else {
                                 let tmp = j-1;
-                                console.log("i : " + i + " j : " + tmp);
+                                // console.log("i : " + i + " j : " + tmp);
                                 ++k;
                             }
                             if(place) {
@@ -940,6 +1003,7 @@ function masqueHandler(e2) {
                     createDot(x,y,idCircle);
                 }
                 layer.draw();
+                modeCanvas = 0;
             }
         }
     } else {
