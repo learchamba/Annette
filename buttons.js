@@ -255,6 +255,7 @@ function init() {
                         let lines = layer.getChildren(function(node){
                             return node.getClassName() === 'Line';
                         });
+                        decaleIDCercles(-1, points, ligne);
 
                         lines[ligne].points().splice(2*points, 2);
                         layer.draw();
@@ -1295,6 +1296,7 @@ function createDot(x, y, idCircle) {
             });
 
             lines[ligne].points().splice(2*points, 2);
+            decaleIDCercles(1, id, ligne);
             layer.draw();
             boutonsOff();
             modeCanvas = 0;
@@ -1313,6 +1315,7 @@ function createDot(x, y, idCircle) {
             });
 
             lines[ligne].points().splice(2*points, 2);
+            decaleIDCercles(1, id, ligne);
             layer.draw();
         }
 
@@ -1373,8 +1376,8 @@ function creerLigne(ptsLigne) {
                             newPoints.push(newY);
                             newPoints = newPoints.concat(this.points().slice(i + 2));
                             this.points(newPoints);
-                            decaleIDCercles(1, (i + 2) / 2, this.attrs['id']);
-                            let idPoint = this.attrs['id'] + '-' + (i + 2)/2;
+                            let idPoint = this.attrs['id'] + '-' + (i + 2) / 2;
+                            decaleIDCercles(1, i / 2, this.attrs['id']);
                             createDot(newX, newY, idPoint);
 
                             added = true;
@@ -1393,6 +1396,7 @@ function creerLigne(ptsLigne) {
                 for(let i = circles.length-1; i >= 0; --i) {
                     circles[i].destroy();
                 }
+                decaleIDCercles(-1, (i + 2) / 2, idLigne);
                 this.destroy();
                 layer.draw();
                 boutonsOff();
@@ -1441,13 +1445,13 @@ function decaleIDCercles(sens, indice, idLigne) {
         return node.getClassName() === 'Arc' && node.attrs['id'].split('-')[0] == idLigne;
     });
     if(sens == -1) {
-        for(let i = circles.length-1; i >= indice; --i) {
+        for(let i = indice; i < circles.length; ++i) {
             let id = circles[i].attrs['id'].split('-');
             let modif = parseInt(id[1]) - 1;
             circles[i].attrs['id'] = id[0] + '-' + (modif.toString());
         }
     } else {
-        for(let i = indice; i < circles.length; ++i) {
+        for(let i = indice + 1; i < circles.length; ++i) {
             let id = circles[i].attrs['id'].split('-');
             let modif = parseInt(id[1]) + 1;
             circles[i].attrs['id'] = id[0] + '-' + (modif.toString());
