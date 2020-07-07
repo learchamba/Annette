@@ -61,7 +61,11 @@ function init() {
     imageCourante = document.getElementById('imageCourante');
     // Parse = require('parse');
 
-    imageCourante.style += " image-rendering: optimizeSpeed; image-rendering: -moz-crisp-edges; image-rendering: -o-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: pixelated; image-rendering: optimize-contrast; -ms-interpolation-mode: nearest-neighbor; "
+    /*
+     censé empêcher l'anti aliasing sur l'image de base,
+     ne change rien à part décaler la stage
+    */
+    // imageCourante.style = imageCourante.style + " image-rendering: optimizeSpeed; image-rendering: -moz-crisp-edges; image-rendering: -o-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: pixelated; image-rendering: optimize-contrast; -ms-interpolation-mode: nearest-neighbor; "
 
     document.getElementById('btnDefileHaut').addEventListener('click',defileHaut);
     document.getElementById('btnDefileBas').addEventListener('click',defileBas);
@@ -216,7 +220,7 @@ function init() {
         });
         initialPosStage = [stage.x(), stage.y()];
         var layerBkgrd = new Konva.Layer();
-        layerBkgrd.getContext().imageSmoothingEnabled = false;
+        // layerBkgrd.getContext().imageSmoothingEnabled = false;
         var imgBkgrd = new Image();
         imgBkgrd.src = this.src;
             var rect = new Konva.Rect( {
@@ -1391,7 +1395,6 @@ function creerLigne(ptsLigne) {
                 for(let i = circles.length-1; i >= 0; --i) {
                     circles[i].destroy();
                 }
-                // decaleIDCercles(-1, (i + 2) / 2, idLigne);
                 this.destroy();
                 layer.draw();
                 boutonsOff();
