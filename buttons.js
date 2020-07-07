@@ -1362,28 +1362,23 @@ function creerLigne(ptsLigne) {
                 let i = 0;
                 let pts = this.points();
                 while(!added && i < pts.length - 3) {
-                    let a = (pts[i+1] - pts[i+3]) / (pts[i] - pts[i+2]);
-                    let b = pts[i+1] - a * pts[i];
 
-                    if(sontEnvironEgales(clickPos.y, a*clickPos.x + b)) {
-                        let prodScal1 = pts[i] * clickPos.y - pts[i + 1] * clickPos.x;
-                        let prodScal2 = pts[i + 2] * clickPos.y - pts[i + 3] * clickPos.x;
-                        if(prodScal1 * prodScal2 < 0) {
-                            let newX = (pts[i] + pts[i + 2]) / 2;
-                            let newY = (pts[i + 1] + pts[i + 3]) / 2;
-                            let newPoints = this.points().slice(0, i + 2);
-                            newPoints.push(newX);
-                            newPoints.push(newY);
-                            newPoints = newPoints.concat(this.points().slice(i + 2));
-                            this.points(newPoints);
-                            let idPoint = this.attrs['id'] + '-' + (i + 2) / 2;
-                            decaleIDCercles(1, i / 2, this.attrs['id']);
-                            createDot(newX, newY, idPoint);
-
-                            added = true;
-                        }
-                        layer.draw();
+                    let prodScal1 = pts[i] * clickPos.y - pts[i + 1] * clickPos.x;
+                    let prodScal2 = pts[i + 2] * clickPos.y - pts[i + 3] * clickPos.x;
+                    if(prodScal1 * prodScal2 < 0) {
+                        let newX = (pts[i] + pts[i + 2]) / 2;
+                        let newY = (pts[i + 1] + pts[i + 3]) / 2;
+                        let newPoints = this.points().slice(0, i + 2);
+                        newPoints.push(newX);
+                        newPoints.push(newY);
+                        newPoints = newPoints.concat(this.points().slice(i + 2));
+                        this.points(newPoints);
+                        let idPoint = this.attrs['id'] + '-' + (i + 2) / 2;
+                        decaleIDCercles(1, i / 2, this.attrs['id']);
+                        createDot(newX, newY, idPoint);
+                        added = true;
                     }
+                    layer.draw();
                     i+=2;
                 }
                 break;
@@ -1396,7 +1391,7 @@ function creerLigne(ptsLigne) {
                 for(let i = circles.length-1; i >= 0; --i) {
                     circles[i].destroy();
                 }
-                decaleIDCercles(-1, (i + 2) / 2, idLigne);
+                // decaleIDCercles(-1, (i + 2) / 2, idLigne);
                 this.destroy();
                 layer.draw();
                 boutonsOff();
