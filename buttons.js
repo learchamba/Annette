@@ -460,128 +460,6 @@ function initCanvas() {
 
     var divCanvas = document.getElementById('divCanvas');
 
-    // divCanvas.addEventListener('mousedown',function(e) {
-    //     if(modeCanvas === 2) {
-    //
-    //         var pos = findPos(this);
-    //         var x = e.pageX - pos.x-20;
-    //         var y = e.pageY - pos.y-20;
-    //         x -= stage.x();
-    //         y -= stage.y();
-    //         x = x/niveauZoom;
-    //         y = y/niveauZoom;
-    //         if(!ellipseFinished){
-    //             enleverDoublons(pointsEllipse);
-    //             pointsEllipse.push([x,y]);
-    //             if(pointsEllipse.length === 2) {
-    //                 // Abscisse, ordonnée, rayon abscisse, rayon ordonnée, rotation, début, fin
-    //                 var centreX = pointsEllipse[0][0];
-    //                 var centreY = pointsEllipse[0][1];
-    //                 var rayX = distance(pointsEllipse[0], pointsEllipse[1]);
-    //                 var rayY = rayX;//distance(pointsEllipse[0],pointsEllipse[2]);
-    //
-    //                 var elli = new Konva.Ellipse({
-    //                     x:centreX,
-    //                     y:centreY,
-    //                     radiusX:rayX,
-    //                     radiusY:rayY,
-    //                     stroke: 'blue',
-    //                     strokeWidth: 1,
-    //                     // draggable: true,
-    //                 });
-    //                 layer.add(elli);
-    //                 ellipseTmp = elli;
-    //                 // elli.on('mouseover', function() {
-    //                 //     if(!ellipseFinished){
-    //                 //         let pointerPos = stage.getPointerPosition();
-    //                 //         pointerPos.x = (pointerPos.x  - stage.x()) / niveauZoom;
-    //                 //         pointerPos.y = (pointerPos.y  - stage.y()) / niveauZoom;
-    //                 //         ellipseTmp.radiusY(distance([this.x(), this.y()], [pointerPos.x, pointerPos.y]));
-    //                 //         layer.draw();
-    //                 //     }
-    //                 // });
-    //                 // elli.on('mouseleave', function() {
-    //                 //     if(!ellipseFinished){
-    //                 //         let pointerPos = stage.getPointerPosition();
-    //                 //         pointerPos.x = (pointerPos.x  - stage.x()) / niveauZoom;
-    //                 //         pointerPos.y = (pointerPos.y  - stage.y()) / niveauZoom;
-    //                 //         this.radiusY(distance([this.x(), this.y()], [pointerPos.x, pointerPos.y]));
-    //                 //         layer.draw();
-    //                 //     }
-    //                 // });
-    //                 elli.on('dblclick', function () {
-    //                     if(modeCanvas === 4) {
-    //                         if(ellipseCliquee) {
-    //                             ellipseCliquee = 0;
-    //                             var trns = layer.getChildren(function (node) {
-    //                                 return node.getClassName() === 'Transformer';
-    //                             })[0];
-    //                             trns.destroy();
-    //                             layer.draw();
-    //                         } else {
-    //                             ellipseCliquee = 1;
-    //                             var tr = new Konva.Transformer({
-    //                                 boundBoxFunc: function (oldBoundBox, newBoundBox) {
-    //                                     // "boundBox" is an object with
-    //                                     // x, y, width, height and rotation properties
-    //                                     // transformer tool will try to fit nodes into that box
-    //
-    //                                     // the logic is simple, if new width is too big
-    //                                     // we will return previous state
-    //                                     if (Math.abs(newBoundBox.width) > 800) {
-    //                                         return oldBoundBox;
-    //                                     }
-    //
-    //                                     return newBoundBox;
-    //                                 },
-    //                             });
-    //                             layer.add(tr);
-    //                             tr.attachTo(elli);
-    //                             layer.draw();
-    //                         }
-    //                     }
-    //                 });
-    //                 ellipseFinished = true;
-    //                 elli.on('click', function () {
-    //                 if( modeCanvas === 5) {
-    //                     this.destroy();
-    //                     layer.draw();
-    //                     boutonsOff();
-    //                     modeCanvas = 0;
-    //                 } else if (modeCanvas === 2) {
-    //                     ellipseFinished = true;
-    //                     this.on('mouseover', function(){});
-    //                     this.on('mouseleave', function(){});
-    //                 }
-    //
-    //             });
-    //                 layer.draw();
-    //             }
-    //         }
-    //         if(ellipseFinished) {
-    //             let pointerPos = stage.getPointerPosition();
-    //             pointerPos.x = (pointerPos.x  - stage.x()) / niveauZoom;
-    //             pointerPos.y = (pointerPos.y  - stage.y()) / niveauZoom;
-    //             ellipseTmp.radiusY(distance([this.x, this.y], [pointerPos.x, pointerPos.y]));
-    //             layer.draw();
-    //         }
-    //
-    //     }
-    // });
-    // divCanvas.addEventListener('mouseup', function() {
-    //     if(modeCanvas === 2){
-    //         if(ellipseFinished == true) {
-    //             modeCanvas = 0;
-    //             document.getElementById('btnAjoutEllipse').className =
-    //             "btn btn-outline-dark btn-rounded btn-lg";
-    //             ellipseTmp = undefined;
-    //         } else {
-    //             while(pointsEllipse.length > 1){
-    //                 pointsEllipse.pop();
-    //             }
-    //         }
-    //     }
-    // });
 
     divCanvas.addEventListener('click',function(e) {
         var pos = findPos(this);
@@ -591,7 +469,7 @@ function initCanvas() {
         y -= stage.y();
         x = x/niveauZoom;
         y = y/niveauZoom;
-        if(ellipseTmp != undefined) {
+        if(ellipseTmp != undefined && pointsEllipse.length === 2) {
             ellipseTmp = undefined;
             ellipseFinished = true;
         }
@@ -616,18 +494,19 @@ function initCanvas() {
 
             break;
             case 2:
-            while(pointsEllipse.length > 1) {
-                pointsEllipse.pop()
+            while(pointsEllipse.length > 1
+                && pointsEllipse[0][0] == pointsEllipse[1][0]
+                && pointsEllipse[0][1] == pointsEllipse[1][1]) {
+                pointsEllipse.splice(1,1);
             }
             pointsEllipse.push([x,y]);
-            // enleverDoublons(pointsEllipse);
             ellipseFinished = false;
 
-            if(pointsEllipse.length === 2) {
+            if(pointsEllipse.length === 1) {
                 // Abscisse, ordonnée, rayon abscisse, rayon ordonnée, rotation, début, fin
                 var centreX = pointsEllipse[0][0];
                 var centreY = pointsEllipse[0][1];
-                var rayX = distance(pointsEllipse[0], pointsEllipse[1]);
+                var rayX = 2;//distance(pointsEllipse[0], pointsEllipse[1]);
                 var rayY = rayX;
 
                 var elli = new Konva.Ellipse({
@@ -637,33 +516,32 @@ function initCanvas() {
                     radiusY:rayY,
                     stroke: 'blue',
                     strokeWidth: 1,
-                    // draggable: true,
                 });
                 ellipseTmp = elli;
                 layer.add(elli);
 
                 stage.on('mousemove', function() {
                     if(ellipseTmp != undefined) {
-                        let clickPos = stage.getPointerPosition();
-                        clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-                        clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
-                        ellipseTmp.radiusY(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
-                        layer.draw();
+                        if(pointsEllipse.length == 1) {
+                            let clickPos = stage.getPointerPosition();
+                            clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
+                            clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+                            ellipseTmp.radiusY(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
+                            ellipseTmp.radiusX(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
+                            layer.draw();
+
+                        } else if(pointsEllipse.length == 2) {
+                            let clickPos = stage.getPointerPosition();
+                            clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
+                            clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+                            ellipseTmp.radiusY(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
+                            layer.draw();
+                            modeCanvas = 0;
+                            document.getElementById('btnAjoutEllipse').className =
+                            "btn btn-outline-dark btn-rounded btn-lg";
+                        }
                     }
                 });
-                // elli.on('mouseout', function() {
-                //     if(!ellipseFinished) {
-                //         let clickPos = stage.getPointerPosition();
-                //         clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-                //         clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
-                //         this.radiusY(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
-                //         layer.draw();
-                //     }
-                // });
-                //
-                // elli.on('mouseup', function() {
-                //     ellipseFinished = true;
-                // });
 
                 elli.on('dblclick', function () {
                     if(modeCanvas === 4) {
@@ -674,8 +552,11 @@ function initCanvas() {
                             })[0];
                             trns.destroy();
                             layer.draw();
+                            this.draggable(false);
                         } else {
                             ellipseCliquee = 1;
+                            this.draggable(true);
+
                             var tr = new Konva.Transformer({
                                 boundBoxFunc: function (oldBoundBox, newBoundBox) {
                                     // "boundBox" is an object with
@@ -706,10 +587,6 @@ function initCanvas() {
                         modeCanvas = 0;
                     }
                 });
-                layer.draw();
-                modeCanvas = 0;
-                document.getElementById('btnAjoutEllipse').className =
-                "btn btn-outline-dark btn-rounded btn-lg";
             }
             break;
 
