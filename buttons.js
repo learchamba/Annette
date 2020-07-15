@@ -299,7 +299,7 @@ function init() {
                                 }
                             }
 
-                            if(!deleted && i == pts.length - 2) {
+                            if(line.closed() && !deleted && i == pts.length - 2) {
                                 let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
                                 let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
                                 let angle = getAngle(v1, v2);
@@ -1520,7 +1520,7 @@ function creerLigne(ptsLigne) {
                     }
                     i+=2;
                 }
-                if(!added && i == pts.length - 2) {
+                if(line.closed() && !added && i == pts.length - 2) {
                     let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
                     let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
                     let angle = getAngle(v1, v2);
