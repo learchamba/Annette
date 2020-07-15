@@ -269,10 +269,49 @@ function init() {
                         layer.draw();
                     } else if(e.target.getClassName() === "Line") {
                         if(e.target.closed()) {
+                            let line = e.target;
+                            let idLigne = line.attrs['id'];
+                            let clickPos = stage.getPointerPosition();
+                            clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
+                            clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+                            let deleted = false;
+                            let i = 0;
+                            let pts = line.points();
+                            while(!deleted && i < pts.length - 3) {
+                                let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
+                                let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
+                                let angle = getAngle(v1, v2);
+                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                    let newPointsDeb = pts.slice(i + 2);
+                                    line.points(newPointsDeb.concat(line.points().slice(0, i + 2)));
+                                    line.closed(false);
+                                    let circles = getDots(idLigne);
+                                    for(let j = circles.length - 1; j >= 0; --j) {
+                                        circles[j].destroy();
+                                    }
+                                    for(let j = 0; j < line.points().length; j += 2) {
+                                        let idCercle = idLigne + '-' + j / 2;
+                                        createDot(line.points()[j], line.points()[j + 1], idCercle);
+                                    }
+                                    deleted = true;
+                                } else {
+                                    i += 2;
+                                }
+                            }
+
+                            if(!deleted && i == pts.length - 2) {
+                                let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
+                                let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
+                                let angle = getAngle(v1, v2);
+                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                    line.closed(false);
+                                    layer.draw();
+                                }
+                            }
                             /*
-                             faire ouverture de la figure fermée en coupant les
-                             points à l'endroit de la section de la ligne et en
-                             les concaténant à l'autre bout
+                             Ouverture de la figure fermée en coupant les points
+                             à l'endroit de la section de la ligne et en les
+                             concaténant à l'autre bout
                             */
                         } else {
                             clickPos.x = (clickPos.x  - stage.x())/ niveauZoom;
@@ -1463,15 +1502,6 @@ function creerLigne(ptsLigne) {
                     let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
                     let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
                     let angle = getAngle(v1, v2);
-                    // let prodScal = dotProduct(v1, v2, angle);
-                    // let multiple = v1[0] * v2[0] + v1[1] * v2[1];
-                    //
-                    // if(Math.abs(v1) < Math.abs(v2)) {
-                    //     let v3 = [v2[0] - v1[0], v2[1] - v1[1]];
-                    //
-                    // }
-                    //
-                    // if(multiple < 0 && sontEnvironEgales(prodScal, multiple)) {
                     if(sontEnvironEgalesProportionnelles(angle, 180)) {
                         let circles = getDots(idLigne);
                         let zInd = circles[(i + 2) / 2].zIndex();
@@ -1481,38 +1511,35 @@ function creerLigne(ptsLigne) {
                         newPoints = newPoints.concat(this.points().slice(i + 2));
                         this.points(newPoints);
                         let idPoint = idLigne + '-' + (i + 2) / 2;
-
-                        // circles = getDots(idLigne);
-                        // console.log('Avant décalage :');
-                        // for(let m = 0; m < circles.length; ++m) {
-                        //     console.log(circles[m].attrs['id']);
-                        // }
                         console.log('Décalage :');
                         decaleIDCercles(1, (i + 2) / 2, idLigne);
-
                         var dot = createDot(clickPos.x, clickPos.y, idPoint);
                         dot.zIndex(zInd);
-
-                        // circles = getDots(idLigne);
-                        // console.log('Après décalage :');
-                        // for(let m = 0; m < circles.length; ++m) {
-                        //     console.log(circles[m].attrs['id']);
-                        // }
-
-                        // circles = getDots(idLigne);
-                        // console.log('Après nouveau point :');
-                        // for(let m = 0; m < circles.length; ++m) {
-                        //     console.log(circles[m].attrs['id']);
-                        // }
-
                         added = true;
-                        // var indice = (i + 2) / 2;
+                        layer.draw();
                     }
-                    layer.draw();
                     i+=2;
                 }
-                mousedwn = true;
-                dot.startDrag();
+                if(!added && i == pts.length - 2) {
+                    let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
+                    let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
+                    let angle = getAngle(v1, v2);
+                    if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                        let circles = getDots(idLigne);
+                        let zInd = circles[circles.length - 1].zIndex() + 1;
+                        this.points().push(clickPos.x);
+                        this.points().push(clickPos.y);
+                        let idPoint = idLigne + '-' + circles.length;
+                        var dot = createDot(clickPos.x, clickPos.y, idPoint);
+                        dot.zIndex(zInd);
+                        added = true;
+                        layer.draw();
+                    }
+                }
+                if(dot != undefined) {
+                    mousedwn = true;
+                    dot.startDrag();
+                }
             }
         }
     });
@@ -1522,39 +1549,6 @@ function creerLigne(ptsLigne) {
     })
     poly.on('click', function () {
         switch (modeCanvas) {
-            case 4:
-                // let clickPos = stage.getPointerPosition();
-                // clickPos.x = (clickPos.x  - stage.x())/ niveauZoom;
-                // clickPos.y = (clickPos.y  - stage.y())/ niveauZoom;
-                // let added = false;
-                // let i = 0;
-                // let pts = this.points();
-                // while(!added && i < pts.length - 3) {
-                //
-                //     let prodScal1 = pts[i] * clickPos.y - pts[i + 1] * clickPos.x;
-                //     let prodScal2 = pts[i + 2] * clickPos.y - pts[i + 3] * clickPos.x;
-                //     if(prodScal1 * prodScal2 < 0) {
-                //         let newX = (pts[i] + pts[i + 2]) / 2;
-                //         let newY = (pts[i + 1] + pts[i + 3]) / 2;
-                //         let newPoints = this.points().slice(0, i + 2);
-                //         newPoints.push(clickPos.x);
-                //         newPoints.push(clickPos.y);
-                //         newPoints = newPoints.concat(this.points().slice(i + 2));
-                //         this.points(newPoints);
-                //         let idPoint = this.attrs['id'] + '-' + (i + 2) / 2;
-                //         decaleIDCercles(1, i / 2, this.attrs['id']);
-                //         createDot(newX, newY, idPoint);
-                //         added = true;
-                //
-                //         let dot = getDot((i + 2) / 2, this.attrs['id']);
-                //         dot.fire('dragstart');
-                //
-                //
-                //     }
-                //     layer.draw();
-                //     i+=2;
-                // }
-                break;
             case 5:
                 let circles = layer.getChildren(function(node){
                     return node.getClassName() === 'Arc';
@@ -1575,8 +1569,7 @@ function creerLigne(ptsLigne) {
                 console.log(this.zIndex());
 
         }
-        if( modeCanvas === 5) {
-        }
+
     });
     if(modeCanvas == 3) {
         poly.closed(true);
