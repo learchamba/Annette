@@ -327,10 +327,15 @@ function init() {
                                     let prodScal2 = pts[i + 2] * clickPos.y - pts[i + 3] * clickPos.x;
                                     if(prodScal1 * prodScal2 < 0) {
                                         if(i + 3 == pts.length - 1) {
-                                            e.target.points().push();
-                                            e.target.points().push();
+                                            e.target.points().pop();
+                                            e.target.points().pop();
                                             let circles = getDots(e.target.attrs['id']);
                                             circles[circles.length - 1].destroy();
+                                        } if(i == 0) {
+                                            e.target.points().shift();
+                                            e.target.points().shift();
+                                            let circles = getDots(e.target.attrs['id']);
+                                            circles[0].destroy();
                                         } else {
                                             let pointsLigne1 = pts.slice(0, i+2);
                                             let pointsLigne2 = pts.slice(i+2);
