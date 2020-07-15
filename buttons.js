@@ -63,7 +63,6 @@ function init() {
     btnChargement = document.getElementById('btnChargement');
     divImgPrinc = document.getElementById('divImagePrincipale');
     imageCourante = document.getElementById('imageCourante');
-    // Parse = require('parse');
 
     /*
      censé empêcher l'anti aliasing sur l'image de base,
@@ -327,46 +326,52 @@ function init() {
                                     let prodScal1 = pts[i] * clickPos.y - pts[i + 1] * clickPos.x;
                                     let prodScal2 = pts[i + 2] * clickPos.y - pts[i + 3] * clickPos.x;
                                     if(prodScal1 * prodScal2 < 0) {
-                                        let pointsLigne1 = pts.slice(0, i+2);
-                                        let pointsLigne2 = pts.slice(i+2);
-                                        modeCanvas = 5;
-                                        e.target.fire('click');
-                                        document.getElementById('btnCorrection').click();
+                                        if(i + 3 == pts.length - 1) {
+                                            e.target.points().push();
+                                            e.target.points().push();
+                                            let circles = getDots(e.target.attrs['id']);
+                                            circles[circles.length - 1].destroy();
+                                        } else {
+                                            let pointsLigne1 = pts.slice(0, i+2);
+                                            let pointsLigne2 = pts.slice(i+2);
+                                            modeCanvas = 5;
+                                            e.target.fire('click');
+                                            document.getElementById('btnCorrection').click();
 
-                                        let poly = creerLigne([pointsLigne1[0],pointsLigne1[1]]);
-                                        nbPoints = 0;
-                                        let idCircle = poly.attrs['id'] + '-' + nbPoints;
-                                        ++nbPoints;
-                                        createDot(pointsLigne1[0], pointsLigne1[1], idCircle);
-                                        layer.add(poly);
-                                        for(let j = 2; j < pointsLigne1.length; ++j) {
-                                            let x = pointsLigne1[j];
-                                            let y = pointsLigne1[++j];
-                                            poly.points(poly.points().concat([x, y]));
-
+                                            let poly = creerLigne([pointsLigne1[0],pointsLigne1[1]]);
+                                            nbPoints = 0;
                                             let idCircle = poly.attrs['id'] + '-' + nbPoints;
                                             ++nbPoints;
-                                            createDot(x,y,idCircle);
-                                        }
-                                        layer.draw();
+                                            createDot(pointsLigne1[0], pointsLigne1[1], idCircle);
+                                            layer.add(poly);
+                                            for(let j = 2; j < pointsLigne1.length; ++j) {
+                                                let x = pointsLigne1[j];
+                                                let y = pointsLigne1[++j];
+                                                poly.points(poly.points().concat([x, y]));
 
-                                        poly = creerLigne([pointsLigne2[0],pointsLigne2[1]]);
-                                        nbPoints = 0;
-                                        idCircle = poly.attrs['id'] + '-' + nbPoints;
-                                        ++nbPoints;
-                                        createDot(pointsLigne2[0], pointsLigne2[1], idCircle);
-                                        layer.add(poly);
-                                        for(let j = 2; j < pointsLigne2.length; ++j) {
-                                            let x = pointsLigne2[j];
-                                            let y = pointsLigne2[++j];
-                                            poly.points(poly.points().concat([x, y]));
+                                                let idCircle = poly.attrs['id'] + '-' + nbPoints;
+                                                ++nbPoints;
+                                                createDot(x,y,idCircle);
+                                            }
+                                            layer.draw();
 
-                                            let idCircle = poly.attrs['id'] + '-' + nbPoints;
+                                            poly = creerLigne([pointsLigne2[0],pointsLigne2[1]]);
+                                            nbPoints = 0;
+                                            idCircle = poly.attrs['id'] + '-' + nbPoints;
                                             ++nbPoints;
-                                            createDot(x,y,idCircle);
+                                            createDot(pointsLigne2[0], pointsLigne2[1], idCircle);
+                                            layer.add(poly);
+                                            for(let j = 2; j < pointsLigne2.length; ++j) {
+                                                let x = pointsLigne2[j];
+                                                let y = pointsLigne2[++j];
+                                                poly.points(poly.points().concat([x, y]));
+
+                                                let idCircle = poly.attrs['id'] + '-' + nbPoints;
+                                                ++nbPoints;
+                                                createDot(x,y,idCircle);
+                                            }
                                         }
                                         layer.draw();
-
                                         deleted = true;
                                     }
                                 }
@@ -723,9 +728,11 @@ function boutonsOff() {
     document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnSupprAnnotation').className = "btn btn-outline-dark btn-rounded btn-lg";
 
-    if(modeCanvas === 4) {
-        if(niveauZoom != 1)
+    if(modeCanvas === 0 && niveauZoom != 1) {
         stage.draggable(true);
+    }
+
+    if(modeCanvas === 4) {
         for(var i = 0; i < layer.getChildren().length; ++i) {
             layer.getChildren()[i].draggable(false);
         }
@@ -1387,6 +1394,7 @@ function createDot(x, y, idCircle) {
         x: x,
         y: y,
         outerRadius: 4,
+        innerRadius: 4,
         angle: 360,
         stroke: 'red',
         strokeWidth: 2,
@@ -1520,7 +1528,7 @@ function creerLigne(ptsLigne) {
                     }
                     i+=2;
                 }
-                if(line.closed() && !added && i == pts.length - 2) {
+                if(this.closed() && !added && i == pts.length - 2) {
                     let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
                     let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
                     let angle = getAngle(v1, v2);
