@@ -1,44 +1,48 @@
+// import * from "./onnx.ts";
+
 var btnMasquer;
 var btnChargement;
-var imageMasque;
-var masqueVisible = true;
-var input;
-var intervalIDLoadImage;
-var debutListe = 0;
-var indiceListe;
-var indiceImages;
-var divImgPrinc;
-var imageCourante;
-var nbPoints =0;
-var indiceImageCourante;
-var pointsEllipse;
-var annotationsStockees;
-var stage;
-var ptsLigne;
-var poly;
-var layer;
-var nbElem;
-var oldPos = [];
-var ecartArcLigne = [];
-var ellipseCliquee = 0;
-var niveauZoom =1;
-var initialPosStage;
-var preDragPosStage;
 var canvas;
 var ctx;
-var Parse;
-var video;
-var nbFrame;
 var chargementVideo = false;
-var hauteurInference = 270;
-var largeurInference = 480;
-var rapportImageInference;
+var cliqueDroit = false;
+var debutListe = 0;
+var divImgPrinc;
 var ecartPointsImportants = 10;
-var lignesSuppr = [];
-var mousedwn = true;
+var ellipseCliquee = 0;
 var ellipseFinished = false;
 var ellipseTmp = undefined;
-var cliqueDroit = false;
+var hauteurInference = 270;
+var idEllipse;
+var imageCourante;
+var imageMasque;
+var indiceImageCourante;
+var indiceImages;
+var indiceListe;
+var initialPosStage;
+var input;
+var intervalIDLoadImage;
+var largeurInference = 480;
+var layer;
+var listeImages = [];
+var masqueVisible = true;
+var mousedwn = true;
+var nbElem;
+var nbFrame;
+var nbPoints = 0;
+var niveauZoom = 1;
+var oldPos = [];
+var pointsEllipse;
+var poly;
+var ptsLigne;
+var rapportImageInferenceX;
+var rapportImageInferenceY;
+var ratioX;
+var ratioY;
+var selected = [];
+var stage;
+var video;
+
 
 var modeCanvas = 0;
 /*
@@ -50,9 +54,6 @@ var modeCanvas = 0;
 * 5 : Suppression d'annotation
 * */
 
-var selected = [];
-var listeImages = [];
-var listeMasques = [];
 
 window.onload = init;
 
@@ -155,25 +156,108 @@ function init() {
         // $("body").append("<a href='" + stage.toDataURL() + "' id='DLCanvas' download='annotation" + indiceImageCourante + ".jpg'>");
         maskArcs();
         var y = document.getElementById("DLCanvas");
+        let nomImage = listeImages[indiceImageCourante - 1].name.split('.')[0];
         // var wantType = "image/bmp";
         // let data = layer.getContext().getImageData();
         // data = realiasing(data);
         // layer.getContext().putImageData(data);
         // layer.filters([Konva.Filters.Threshold]);
         // layer.threshold(1);
+        ratioY = imageCourante.naturalHeight / imageCourante.height;
+        ratioX = imageCourante.naturalWidth / imageCourante.width;
+
+        let cptInput = 0;
+        let nomFicText;
+        let nomFicMasque;
+        let nomFicImage;
+        let texte;
+
+        let inputTextuel = document.getElementById('CBJSON');
+        if(inputTextuel.checked) {
+            ++cptInput;
+            let lines = getAllLines();
+            if(lines.length != 0) {
+                texte = serializeLines(lines);
+
+            }
+            // for(let i = 0; i < lines.length; ++i) {
+            //     let text = serializeLine(lines[i]);
+            //     console.log(text);
+            //
+            // }
+            let ellipses = getAllEllipses();
+            if(ellipses.length != 0) {
+                if(lines.length != 0) {
+                    texte += ",\n";
+                }
+                texte += serializeEllipses(ellipses);
+            }
+            nomFicText = "annotationTexte-" + nomImage + ".JSON"
+        }
         layer.draw();
-        // var dataUri = stage.toCanvas().toDataURL(wantType);
-        // if (dataUri.indexOf(wantType) < 0) {
+
+        let inputImage = document.getElementById('CBimage');
+        if(inputImage.checked) {
+            ++cptInput;
+            // var dataUri = stage.toCanvas().toDataURL(wantType);
+            // if (dataUri.indexOf(wantType) < 0) {
             y.href = stage.toDataURL();
-            y.download = 'annotation' + indiceImageCourante + '.png'
-        // } else {
-        //     y.href = dataUri;
-        //     y.download = 'annotation' + indiceImageCourante + '.bmp'
-        // }
-        y.addEventListener('change', downloadimage, false);
-        annotationsStockees = [];
-        y.click();
+            nomFicImage = 'imageAnnotee-' + nomImage + '.png';
+            y.download = nomFicImage;
+            // } else {
+            //     y.href = dataUri;
+            //     y.download = 'annotation' + indiceImageCourante + '.bmp'
+            // }
+            y.addEventListener('change', downloadimage, false);
+            // y.click();
+        }
+
+        let inputMasque = document.getElementById('CBmasque');
+        if(inputMasque.checked) {
+            ++cptInput;
+            nomFicMasque = 'masque-' + nomImage + '.png';
+        }
+        if(cptInput > 1) {
+            var zip = new JSZip();
+            if(inputImage.checked) {
+                // var img = zip.folder("images");
+
+
+                let canvasTmp = document.createElement('canvas');
+                canvasTmp.display = 'none';
+                canvasTmp.height = imageCourante.height;
+                canvasTmp.width = imageCourante.width;
+                canvasTmp.src = stage.toDataURL();
+                let imgData = canvasTmp.getContext('2d').getImageData(0,0,canvasTmp.width, canvasTmp.height);
+                let imgData2 = Uint8Array.from(imgData.data);
+                let blob = new Blob(imgData2, {type: 'images/png'})
+
+                zip.file(nomFicImage, blob);//, {base64: true});
+            }
+            if(inputTextuel.checked) {
+                zip.file(nomFicText, texte);
+            }
+            if(inputMasque.checked) {
+
+            }
+            zip.generateAsync({type:"blob"})
+            .then(function(content) {
+                // see FileSaver.js
+                saveAs(content, nomImage + ".zip");
+            });
+
+
+        } else {
+            if(inputImage.checked) {
+                y.click();
+            } else if(inputTextuel.checked) {
+                let blob = new Blob([texte], { type: "text/plain;charset=utf-8" });
+                saveAs(blob, nomFicText);
+            }
+        }
+
         showArcs();
+
     });
 
     document.getElementById('btnZoomPlus').addEventListener(('click'), function () {
@@ -509,6 +593,7 @@ function init() {
 
     }, false);
 
+    // document.getElementById('btnAnnot1').addEventListener('click', annotationImagePrincipale);
 
 
     for(var i = 1; i<5; ++i) {
@@ -617,7 +702,7 @@ function initCanvas() {
                                 let clickPos = stage.getPointerPosition();
                                 clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
                                 clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
-                                ellipseTmp.radiusY(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
+                                ellipseTmp.radiusY(clickPos.y - pointsEllipse[0][1]);
                                 layer.draw();
                                 modeCanvas = 0;
                                 document.getElementById('btnAjoutEllipse').className =
@@ -639,6 +724,7 @@ function initCanvas() {
                             } else {
                                 ellipseCliquee = 1;
                                 this.draggable(true);
+                                idEllipse = this.attrs['id'];
 
                                 var tr = new Konva.Transformer({
                                     boundBoxFunc: function (oldBoundBox, newBoundBox) {
@@ -655,7 +741,6 @@ function initCanvas() {
                                         return newBoundBox;
                                     },
                                 });
-
                                 layer.add(tr);
                                 tr.attachTo(elli);
                                 layer.draw();
@@ -670,6 +755,18 @@ function initCanvas() {
                             modeCanvas = 0;
                         }
                     });
+                    elli.on('transform', function (e) {
+                        let tmpX = this.scaleX();
+                        let tmpY = this.scaleY();
+                        let trans = layer.getChildren(function(node) {return node.getClassName() === 'Transformer';})[0];
+                        trans.scaleX(1);
+                        trans.scaleY(1);
+                        this.scaleX(1);
+                        this.scaleY(1);
+                        this.radiusX(this.radiusX() * tmpX);
+                        this.radiusY(this.radiusY() * tmpY);
+                        layer.draw();
+                    })
                 }
                 break;
             case 4:
@@ -1063,18 +1160,11 @@ function computeFrame() {
 
 function extractFromVideo() {
     $("body").append("<input type='file' id='explorerChargementVideo' accept='video/*'>");
-
-
-
     input = document.getElementById('explorerChargementVideo');
-
     var y = document.getElementById("explorerChargementVideo");
     y.addEventListener('change', loadVideo, false);
     input.click();
     chargementVideo = true;
-
-
-
 }
 
 function imagedata_to_image(imagedata) {
@@ -1202,7 +1292,8 @@ function isBlack(data, i ,j, canvas) {
 function masqueHandler(e2) {
     $("body").append("<canvas id='canvasMasque' style='visibility: visible' width='" + largeurInference + "' height='" + hauteurInference + "'>")
     var canvas = document.getElementById('canvasMasque');
-    rapportImageInference = imageCourante.width / largeurInference;
+    rapportImageInferenceX = imageCourante.width / largeurInference;
+    rapportImageInferenceY = imageCourante.height / hauteurInference;
     var img = new Image(largeurInference, hauteurInference);
     img.src = e2.target.result;
     canvas.height = img.height;
@@ -1215,7 +1306,7 @@ function masqueHandler(e2) {
 
     ecartPointsImportants = parseInt(document.getElementById('inputCoef').value);
 
-
+    let startTime = performance.now();
     if(data.find(element => element == 255)) {
         for (var i = 0; i < canvas.height; ++i) {
             for (var j = 0; j < canvas.width; ++j) {
@@ -1231,7 +1322,6 @@ function masqueHandler(e2) {
                             if(ligne[0][1] == ptsAnnotations[k][0][1] && ligne[1][1] == ptsAnnotations[k][longueurPtsAnnotK-1][1]) {
                                 //ligne de fermeture de la forme
                                 ptsAnnotations[k] = ligne.reverse().concat(ptsAnnotations[k]);
-                                // ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
                             } else if(ligne[1][0] -1 == ptsAnnotations[k][0][0]
                                 && ligne[0][1] < ptsAnnotations[k][0][1] //deb2 < deb 1
@@ -1306,8 +1396,8 @@ function masqueHandler(e2) {
                     modeCanvas = 1;
 
                 for(let j = 0; j < bonsPoints.length; ++j) {
-                    bonsPoints[j][0] = bonsPoints[j][0] * rapportImageInference;// + 1;
-                    bonsPoints[j][1] = bonsPoints[j][1] * rapportImageInference;// + 1;
+                    bonsPoints[j][0] = bonsPoints[j][0] * rapportImageInferenceY;// + 1;
+                    bonsPoints[j][1] = bonsPoints[j][1] * rapportImageInferenceX;// + 1;
                 }
 
                 let x = bonsPoints[0][1];
@@ -1335,7 +1425,7 @@ function masqueHandler(e2) {
         alert("Erreur de chargement du masque")
     }
     document.getElementById('explorerMasque').remove();
-
+    console.log(performance.now() - startTime);
 }
 
 function masquerMasque() {
@@ -1506,7 +1596,7 @@ function createDot(x, y, idCircle) {
 function creerLigne(ptsLigne) {
     var poly = new Konva.Line({
         points: ptsLigne,
-        stroke: 'red',
+        stroke: 'blue',
         strokeWidth: 3,
         id: nbElem,
     });
@@ -1679,6 +1769,28 @@ function getAllDots() {
 
 }
 
+function getAllEllipses() {
+    /*
+    Retourne tous les cercles sur la stage
+    */
+    let ellipses = layer.getChildren(function(node){
+        return node.getClassName() === 'Ellipse';
+    });
+    return ellipses;
+
+}
+
+function getAllLines() {
+    /*
+    Retourne tous les cercles sur la stage
+    */
+    let lines = layer.getChildren(function(node){
+        return node.getClassName() === 'Line';
+    });
+    return lines;
+
+}
+
 function getDot(indicePoint, idLigne) {
     /*
     Retourne le point spécifié
@@ -1718,3 +1830,216 @@ function majIdAnnotations(id) {
         lignes[i].attrs['id'] = idTmp;
     }
 }
+
+//Gestion de l'export textuel
+function serializeEllipse(elli) {
+    let deb = "\t\t{\n"
+    let center = "\t\t\t\"center\" : [" + elli.x().toString() + ", " + elli.y().toString() + "],\n";
+    let radX = "\t\t\t\"radiusX\" : " + elli.radiusX().toString() + ",\n";
+    let radY = "\t\t\t\"radiusY\" : " + elli.radiusY().toString() + ",\n";
+    let rotation = "\t\t\t\"rotation\" : " + elli.rotation().toString() + "\n";
+    let fin = "\t\t}";
+    let ret = deb + center + radX + radY + rotation + fin;
+    // console.log(ret);
+    return ret;
+}
+
+function serializeEllipses(ellipses) {
+    let str = "{\n\t\"ellipses\" : [\n";
+    for(let i = 0; i < ellipses.length - 1; ++i) {
+        str += serializeEllipse(ellipses[i]) + ',\n';
+    }
+    str += serializeEllipse(ellipses[ellipses.length - 1]) + '\n';
+    str += "\t]\n}"
+    // console.log(str);
+    return str;
+}
+
+function serializeLine(line) {
+    let deb = "\t\t{\n"
+    let closed = "\t\t\t\"closed\" : " + line.closed().toString() + ",\n";
+    let points = "\t\t\t\"points\" : [";
+    for(let i = 0; i < line.points().length - 2; ++i) {
+        points += (line.points()[i] * ratioX).toString() + ", ";
+        points += (line.points()[++i] * ratioY).toString() + ", ";
+    }
+    points += (line.points()[line.points().length - 2] * ratioX).toString() + ", ";
+    points += (line.points()[line.points().length - 1] * ratioY).toString() + "]\n ";
+    let fin = "\t\t}";
+    let ret = deb + closed + points + fin;
+    return ret;
+}
+
+function serializeLines(lines) {
+    let str = "{\n\t\"lines\" : [\n";
+    for(let i = 0; i < lines.length - 1; ++i) {
+        str += serializeLine(lines[i]) + ',\n';
+    }
+    str += serializeLine(lines[lines.length-1]) + '\n';
+    str += "\t]\n}"
+    // console.log(str);
+    return str;
+}
+
+//Gestion du réseau onnx
+// function annotationImagePrincipale() {
+    // runExample();
+    // const myOnnxSession = new onnx.InferenceSession();
+    // // load the ONNX model file
+    // myOnnxSession.loadModel("./ipcai_baseline_CP30.onnx").then(() => {
+    //     // generate model input
+    //     let canvas = document.getElementById('canvasRedimmension');
+    //     let ctx = canvas.getContext();
+    //     imageCourante.getContext();
+    //     // canvas.src = document.getElementById('imageCourante').src;
+    //     ctx.drawImage(imageCourante, 0, 0, largeurInference, hauteurInference);
+    //
+    //     /*
+    //      ajout de deux lignes noires à la fin de l'image pour le fonctionnement
+    //      du réseau utilisé
+    //     */
+    //     let imgdata = ctx.getImageData();
+    //     for(let i = 0; i < 2 * 4 * largeurInference; ++i) {
+    //         imgdata.push(0);
+    //     }
+    //     /*conversion en float32 pour le fonctionnement du réseau*/
+    //     let imgdataFloat32 = [];
+    //     imgdata.forEach((element, i) => {
+    //         imgdataFloat32.push(element / 255.0);
+    //     });
+    //     let tnsr = new Tensor(imgdataFloat32, 'float32')
+    //     let tensorTab = new ReadonlyArray(tnsr);
+    //     const inferenceInputs = getInputs();
+    //     // execute the model
+    //     myOnnxSession.run(tnsr).then((output) => {
+    //         // consume the output
+    //         const outputTensor = output.values().next().value;
+    //         console.log(`model output tensor: ${outputTensor.data}.`);
+    //     });
+    // });
+// }
+//
+//
+// async function runExample() {
+//   // Create an ONNX inference session with WebGL backend.
+//   const session = new onnx.InferenceSession({ backendHint: 'webgl' });
+//
+//   // Load an ONNX model. This model is Resnet50 that takes a 1*3*224*224 image and classifies it.
+//   await session.loadModel("./resnet50_8.onnx");
+//
+//   // Load image.
+//   // const width = 480;
+//   // const height = 270;
+//
+//   let canvas = document.getElementById('canvasRedimmension');
+//   let ctx = canvas.getContext();
+//   imageCourante.getContext();
+//   // canvas.src = document.getElementById('imageCourante').src;
+//   ctx.drawImage(imageCourante, 0, 0, largeurInference, hauteurInference);
+//
+//   const imageLoader = new ImageLoader(480, 270);
+//   let imgDtTmp = await imageLoader.getImageData(ctx.toDataURL()); //Fonctionne avec une dataURL
+//   // let imgDtTmp = oldImageData;
+//   for(let i = 270*480*4; i < imgDtTmp.data.length; ++i) {
+//       imgDtTmp.data[i] = 0;
+//       imgDtTmp.data[++i] = 0;
+//       imgDtTmp.data[++i] = 0;
+//   }
+//   imgDtTmp.height = 272;
+//
+//   const imageData = imgDtTmp;
+//
+//   // Preprocess the image data to match input dimension requirement, which is 1*3*224*224.
+//   /*
+//    imageSize = 224, declaration non-trouvée
+//    erreur si la valeur est modifiée avec le modèle
+//    test, peut-être pas avec un autre.
+//   */
+//   const width = imageSize;
+//   const height = imageSize;
+//   const preprocessedData = preprocess(imageData.data, width, height);
+//
+//   const inputTensor = new onnx.Tensor(preprocessedData, 'float32', [1, 3, width, height]);
+//   // Run model with Tensor inputs and get the result.
+//   const outputMap = await session.run([inputTensor]);
+//   const outputData = outputMap.values().next().value.data;
+//
+//   // Render the output result in html.
+//   printMatches(outputData);
+// }
+//
+// /**
+//  * Preprocess raw image data to match Resnet50 requirement.
+//  */
+// function preprocess(data, width, height) {
+//   const dataFromImage = ndarray(new Float32Array(data), [width, height, 4]);
+//   const dataProcessed = ndarray(new Float32Array(width * height * 3), [1, 3, height, width]);
+//
+//   // Normalize 0-255 to (-1)-1
+//   ndarray.ops.divseq(dataFromImage, 128.0);
+//   ndarray.ops.subseq(dataFromImage, 1.0);
+//
+//   // Realign imageData from [224*224*4] to the correct dimension [1*3*224*224].
+//   ndarray.ops.assign(dataProcessed.pick(0, 0, null, null), dataFromImage.pick(null, null, 2));
+//   ndarray.ops.assign(dataProcessed.pick(0, 1, null, null), dataFromImage.pick(null, null, 1));
+//   ndarray.ops.assign(dataProcessed.pick(0, 2, null, null), dataFromImage.pick(null, null, 0));
+//
+//   return dataProcessed.data;
+// }
+//
+// /**
+//  * Utility function to post-process Resnet50 output. Find top k ImageNet classes with highest probability.
+//  */
+// function imagenetClassesTopK(classProbabilities, k) {
+//   if (!k) { k = 5; }
+//   const probs = Array.from(classProbabilities);
+//   const probsIndices = probs.map(
+//     function (prob, index) {
+//       return [prob, index];
+//     }
+//   );
+//   const sorted = probsIndices.sort(
+//     function (a, b) {
+//       if (a[0] < b[0]) {
+//         return -1;
+//       }
+//       if (a[0] > b[0]) {
+//         return 1;
+//       }
+//       return 0;
+//     }
+//   ).reverse();
+//   const topK = sorted.slice(0, k).map(function (probIndex) {
+//     const iClass = imagenetClasses[probIndex[1]];
+//     return {
+//       id: iClass[0],
+//       index: parseInt(probIndex[1], 10),
+//       name: iClass[1].replace(/_/g, ' '),
+//       probability: probIndex[0]
+//     };
+//   });
+//   return topK;
+// }
+//
+// /**
+//  * Render Resnet50 output to Html.
+//  */
+// function printMatches(data) {
+//   let outputClasses = [];
+//   if (!data || data.length === 0) {
+//     const empty = [];
+//     for (let i = 0; i < 5; i++) {
+//       empty.push({ name: '-', probability: 0, index: 0 });
+//     }
+//     outputClasses = empty;
+//   } else {
+//     outputClasses = imagenetClassesTopK(data, 5);
+//   }
+//   const predictions = document.getElementById('predictions');
+//   predictions.innerHTML = '';
+//   const results = [];
+//   for (let i of [0, 1, 2, 3, 4]) {
+//     results.push(`${outputClasses[i].name}: ${Math.round(100 * outputClasses[i].probability)}%`);
+//   }
+//   predictions.innerHTML = results.join('<br/>');
+// }
