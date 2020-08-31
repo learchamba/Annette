@@ -24,6 +24,7 @@ var input;
 var intervalIDLoadImage;
 var largeurInference = 480;
 var layer;
+var layerBkgrd;
 var listeImages = [];
 var masqueVisible = true;
 var mousedwn = true;
@@ -39,6 +40,8 @@ var rapportImageInferenceX;
 var rapportImageInferenceY;
 var ratioX;
 var ratioY;
+var rectFond;
+var rectNoir;
 var selected = [];
 var stage;
 var video;
@@ -157,20 +160,18 @@ function init() {
         maskArcs();
         var y = document.getElementById("DLCanvas");
         let nomImage = listeImages[indiceImageCourante - 1].name.split('.')[0];
-        // var wantType = "image/bmp";
-        // let data = layer.getContext().getImageData();
-        // data = realiasing(data);
-        // layer.getContext().putImageData(data);
-        // layer.filters([Konva.Filters.Threshold]);
-        // layer.threshold(1);
+        killTransformers();
         ratioY = imageCourante.naturalHeight / imageCourante.height;
         ratioX = imageCourante.naturalWidth / imageCourante.width;
+        rapportImageInferenceX = imageCourante.width / largeurInference;
+        rapportImageInferenceY = imageCourante.height / hauteurInference;
 
         let cptInput = 0;
         let nomFicText;
         let nomFicMasque;
         let nomFicImage;
         let texte;
+        let maskData;
 
         let inputTextuel = document.getElementById('CBJSON');
         if(inputTextuel.checked) {
@@ -199,45 +200,42 @@ function init() {
         let inputImage = document.getElementById('CBimage');
         if(inputImage.checked) {
             ++cptInput;
-            // var dataUri = stage.toCanvas().toDataURL(wantType);
-            // if (dataUri.indexOf(wantType) < 0) {
             y.href = stage.toDataURL();
             nomFicImage = 'imageAnnotee-' + nomImage + '.png';
             y.download = nomFicImage;
-            // } else {
-            //     y.href = dataUri;
-            //     y.download = 'annotation' + indiceImageCourante + '.bmp'
-            // }
             y.addEventListener('change', downloadimage, false);
             // y.click();
         }
-
+        // setTimeout(function () {console.log('');}, 100);
         let inputMasque = document.getElementById('CBmasque');
         if(inputMasque.checked) {
+            // setTimeout(function () {console.log('');}, 100);
             ++cptInput;
+            prepareMask();
+            y.href = stage.toDataURL();
             nomFicMasque = 'masque-' + nomImage + '.png';
+            y.download = nomFicMasque;
+            y.addEventListener('change', downloadimage, false);
+            maskData = y.href;
+            setMaskToNormal();
         }
         if(cptInput > 1) {
             var zip = new JSZip();
             if(inputImage.checked) {
-                // var img = zip.folder("images");
+                let imgData = y.href;
+                imgData = imgData.substr(22); //retire le texte au début de l'URL
+                imgData = atob(imgData); //conversion en binaire
 
-
-                let canvasTmp = document.createElement('canvas');
-                canvasTmp.display = 'none';
-                canvasTmp.height = imageCourante.height;
-                canvasTmp.width = imageCourante.width;
-                canvasTmp.src = stage.toDataURL();
-                let imgData = canvasTmp.getContext('2d').getImageData(0,0,canvasTmp.width, canvasTmp.height);
-                let imgData2 = Uint8Array.from(imgData.data);
-                let blob = new Blob(imgData2, {type: 'images/png'})
-
-                zip.file(nomFicImage, blob);//, {base64: true});
+                zip.file(nomFicImage, imgData, {binary: true});
             }
             if(inputTextuel.checked) {
                 zip.file(nomFicText, texte);
             }
             if(inputMasque.checked) {
+            maskData = maskData.substr(22); //retire le texte au début de l'URL
+            maskData = atob(maskData); //conversion en binaire
+
+            zip.file(nomFicMasque, maskData, {binary: true});
 
             }
             zip.generateAsync({type:"blob"})
@@ -245,14 +243,14 @@ function init() {
                 // see FileSaver.js
                 saveAs(content, nomImage + ".zip");
             });
-
-
         } else {
             if(inputImage.checked) {
                 y.click();
             } else if(inputTextuel.checked) {
                 let blob = new Blob([texte], { type: "text/plain;charset=utf-8" });
                 saveAs(blob, nomFicText);
+            } else if(inputMasque.checked) {
+                y.click();                
             }
         }
 
@@ -307,11 +305,26 @@ function init() {
             height: canvasHeight
         });
         initialPosStage = [stage.x(), stage.y()];
-        var layerBkgrd = new Konva.Layer();
+        layerBkgrd = new Konva.Layer();
         // layerBkgrd.getContext().imageSmoothingEnabled = false;
         var imgBkgrd = new Image();
+        imgBkgrd.src = './fondNoir.png';
+        rectNoir = new Konva.Rect( {
+                x: 0,
+                y: 0,
+                width: canvasWidth,
+                height: canvasHeight,
+                fillPatternImage:imgBkgrd,
+                fillPatternRepeat: 'no-repeat',
+                fillPatternScaleX: canvasWidth/imgBkgrd.width,
+                fillPatternScaleY: canvasHeight/imgBkgrd.height,
+                id: 'imgNoire',
+            });
+        layerBkgrd.add(rectNoir);
+
+        imgBkgrd = new Image();
         imgBkgrd.src = this.src;
-        var rect = new Konva.Rect( {
+        rectFond = new Konva.Rect( {
                 x: 0,
                 y: 0,
                 width: canvasWidth,
@@ -322,7 +335,7 @@ function init() {
                 fillPatternScaleY: canvasHeight/imgBkgrd.height,
                 id: 'imgBackground',
             });
-        layerBkgrd.add(rect);
+        layerBkgrd.add(rectFond);
         stage.add(layerBkgrd);
         layerBkgrd.draw();
         layer = new Konva.Layer();
@@ -899,6 +912,74 @@ function showArcs() {
     layer.draw();
 }
 
+function prepareMask() {
+    let lines = getAllLines();
+    let ellipses = getAllEllipses();
+    maskArcs();
+
+    stage.height(270);
+    stage.width(480);
+
+    // let rect = layerBkgrd.getChildren(function(node) {return node.attrs['id'].includes('imgBackground');});
+    rectFond.hide();
+    // rectNoir.show();
+
+    for(let i = 0; i < lines.length; ++i) {
+        lines[i].stroke('white');
+        lines[i].strokeWidth(1);
+        for(let j = 0; j < lines[i].points().length; ++j) {
+            lines[i].points()[j] = lines[i].points()[j] / rapportImageInferenceX;
+            lines[i].points()[++j] = lines[i].points()[j] / rapportImageInferenceY;
+        }
+    }
+
+    for(let i = 0; i < ellipses.length; ++i) {
+        ellipses[i].stroke('white');
+        ellipses[i].strokeWidth(1);
+        ellipses[i].x(ellipses[i].x() / rapportImageInferenceX);
+        ellipses[i].y(ellipses[i].y() / rapportImageInferenceY);
+        ellipses[i].radiusX(ellipses[i].radiusX() / rapportImageInferenceX);
+        ellipses[i].radiusY(ellipses[i].radiusY() / rapportImageInferenceX);
+    }
+}
+
+function setMaskToNormal() {
+    let lines = getAllLines();
+    let ellipses = getAllEllipses();
+    showArcs();
+
+    stage.height(imageCourante.height);
+    stage.width(imageCourante.width);
+
+    for(let i = 0; i < lines.length; ++i) {
+        lines[i].stroke('blue');
+        lines[i].strokeWidth(3);
+        for(let j = 0; j < lines[i].points().length; ++j) {
+            lines[i].points()[j] = lines[i].points()[j] * rapportImageInferenceX;
+            lines[i].points()[++j] = lines[i].points()[j] * rapportImageInferenceY;
+        }
+    }
+
+    for(let i = 0; i < ellipses.length; ++i) {
+        ellipses[i].stroke('blue');
+        ellipses[i].strokeWidth(1);
+        ellipses[i].x(ellipses[i].x() * rapportImageInferenceX);
+        ellipses[i].y(ellipses[i].y() * rapportImageInferenceY);
+        ellipses[i].radiusX(ellipses[i].radiusX() * rapportImageInferenceX);
+        ellipses[i].radiusY(ellipses[i].radiusY() * rapportImageInferenceX);
+    }
+
+    // let rect = layerBkgrd.getChildren(function(node) {return node.attrs['id'].includes('imgBackground');});
+    // rectNoir.hide();
+    rectFond.show();
+    layerBkgrd.draw();
+
+
+    // rect = layerBkgrd.getChildren(function(node) {return node.attrs['id'].includes('imgNoire');});
+    // rect.hide();
+
+    layer.draw();
+}
 
 //Gestion des images
 function afficheListeImages() {
@@ -997,6 +1078,21 @@ function isRed(pixel) {
     return ret;
 }
 
+function imageHandler(e2) {
+    var idImg = 'imageL'+indiceImages;
+    document.getElementById(idImg).src = e2.target.result;
+    ++indiceImages;
+}
+
+function killTransformers() {
+    var trns = layer.getChildren(function (node) {
+        return node.getClassName() === 'Transformer';
+    })[0];
+    if(trns){
+        trns.destroy();
+    }
+}
+
 function load1Picture() {
 
     $("body").append("<input type='file' id='explorerChargement' accept='image/*' multiple>");
@@ -1005,12 +1101,6 @@ function load1Picture() {
     var y = document.getElementById("explorerChargement");
     y.addEventListener('change', loadimage, false);
     input.click();
-}
-
-function imageHandler(e2) {
-    var idImg = 'imageL'+indiceImages;
-    document.getElementById(idImg).src = e2.target.result;
-    ++indiceImages;
 }
 
 function loadimage(e1) {
@@ -1432,13 +1522,15 @@ function masquerMasque() {
 
     if (masqueVisible) {
         masqueVisible = false;
-        document.getElementById('divCanvas').style.visibility = 'hidden';
-        document.getElementById('imageCourante').style.visibility = 'visible';
+        // document.getElementById('divCanvas').style.visibility = 'hidden';
+        // document.getElementById('imageCourante').style.visibility = 'visible';
+        layer.hide();
         document.getElementById('btnMasquer').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
     } else {
         masqueVisible = true;
-        document.getElementById('divCanvas').style.visibility = 'visible';
-        document.getElementById('imageCourante').style.visibility = 'hidden';
+        // document.getElementById('divCanvas').style.visibility = 'visible';
+        // document.getElementById('imageCourante').style.visibility = 'hidden';
+        layer.show();
         document.getElementById('btnMasquer').className = "btn btn-outline-dark btn-rounded btn-lg";
     }
 }
