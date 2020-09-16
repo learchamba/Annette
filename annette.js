@@ -59,6 +59,7 @@ var rectFond;
 var rectNoir;
 var selected = [];
 var stage;
+var tmpDot = false;
 var video;
 
 
@@ -117,7 +118,6 @@ function init() {
             document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
             // stage.draggable(false);
             let circles = getAllDots();
-            nbPoints = 0;
             for(var i = 0; i < circles.length; ++i) {
                 circles[i].draggable(true);
             }
@@ -454,24 +454,24 @@ function init() {
             }
         });
 
-        stage.on('mouseup', function (e) {
-            if(e.evt.button == 0) {
-                if(modeCanvas == 4) {
-                    // let endTime = Date.now();
-                    stage.draggable(true);
-                    // dragged = false;
-                    if(e.target.getClassName() !== 'Arc') {
-                        let clickPos = stage.getPointerPosition();
-                        clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-                        clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
-                        let circle = findCircle(clickPos);
-                        // if(endTime - startTime < longClick && circle != undefined){
-                        //     circle.stopDrag();
-                        // }
-                    }
-                }
-            }
-        });
+        // stage.on('mouseup', function (e) {
+        //     if(e.evt.button == 0) {
+        //         if(modeCanvas == 4) {
+        //             // let endTime = Date.now();
+        //             stage.draggable(true);
+        //             // dragged = false;
+        //             if(e.target.getClassName() !== 'Arc') {
+        //                 let clickPos = stage.getPointerPosition();
+        //                 clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
+        //                 clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+        //                 let circle = findCircle(clickPos);
+        //                 // if(endTime - startTime < longClick && circle != undefined){
+        //                 //     circle.stopDrag();
+        //                 // }
+        //             }
+        //         }
+        //     }
+        // });
 
         stage.on('contextmenu', function (e) {
             cliqueDroit = true;
@@ -637,30 +637,6 @@ function init() {
                     console.log(test);
             }
         });
-
-        // stage.on('mousemove', function () {
-        //     if(modeCanvas == 4 && constructMode) {
-        //         let clickPos = stage.getPointerPosition();
-        //         clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-        //         clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
-        //         let circle = findCircle(clickPos);
-        //         if(firstPointAdded) {
-        //             poly.points().pop();
-        //             poly.points().pop();
-        //         } else {
-        //             firstPointAdded = true;
-        //         }
-        //         poly.points().push(clickPos.x);
-        //         poly.points().push(clickPos.y);
-        //         if(currentCircle != undefined) {
-        //             circle.x(clickPos.x);
-        //             circle.y(clickPos.y);
-        //         } else {
-        //             remakeDots(poly.attrs['id']);
-        //         }
-        //         layer.draw();
-        //     }
-        // });
 
         var scaleBy = 1.05;
 
@@ -965,50 +941,96 @@ function initCanvas() {
                 if(!dragged) {
                     let circle;
                     let idCircle;
-                    circle = findCircle(clickPos);
-                    if(circle != undefined) {
-                        idCircle = circle.attrs['id'].split('-');
-                        if(!pointCreated && idCircle[1] == 0 || idCircle[1] == getLine(idCircle[0]).getPoints().length / 2 - 1) {
-                            circle.stopDrag();
-                            lineFusion(e);
-                        }
-                    } else {
-                        pointCreated = true;
-                        if(nbPoints === 0) {
+                    let circles = findSeveralCircles(clickPos);
+                    switch (circles.length) {
+                        case 0:
+                            pointCreated = true;
+                            if(nbPoints === 0) {
 
-                            ptsLigne = [x,y];
-                            poly = creerLigne(ptsLigne);
-                            layer.add(poly);
-                            layer.draw();
-                            createDot = true;
-                            newLineBool = true;
-                            correctionLine = true;
-                            readyToMerge = true;
-                            isCircleDragged = false;
-                            constructMode = true;
-                        } else {
-                            if(createDot) {
-                                poly.points(poly.points().concat([x, y]));
-                            }
-                        }
-                        nbPoints++;
-                        if(createDot) {
-                            if(!isCircleDragged) {
-                                let idCircle = poly.attrs['id'] + '-' + (poly.points().length / 2 - 1).toString();
-                                create1Dot(x,y,idCircle);
-                            } else {
+                                ptsLigne = [x,y];
+                                poly = creerLigne(ptsLigne);
+                                layer.add(poly);
+                                layer.draw();
+                                createDot = true;
+                                newLineBool = true;
+                                correctionLine = true;
+                                readyToMerge = true;
                                 isCircleDragged = false;
-                            }
-                        } else {
-                            createDot = true;
-                            if(newLineBool){
-                                nbPoints = 0;
+                                constructMode = true;
+                                createTempDot(poly.attrs['id']);
                             } else {
-                                nbPoints--;
+                                if(createDot) {
+                                    createTempDot(poly.attrs['id']);
+                                    // poly.points(poly.points().concat([x, y]));
+                                }
                             }
-                        }
+                            nbPoints++;
+                            if(createDot) {
+                                if(!isCircleDragged) {
+                                    let idCircle = poly.attrs['id'] + '-' + (poly.points().length / 2 - 1).toString();
+                                    create1Dot(x,y,idCircle);
+                                } else {
+                                    isCircleDragged = false;
+                                }
+                            } else {
+                                createDot = true;
+                                if(newLineBool){
+                                    nbPoints = 0;
+                                } else {
+                                    nbPoints--;
+                                }
+                            }
+                            break;
+                        case 1:
+                            circle = circles[0];
+                            idCircle = circle.attrs['id'].split('-');
+                            if((!pointCreated || tmpDot) && idCircle[1] == 0 || idCircle[1] == getLine(idCircle[0]).getPoints().length / 2 - 1) {
+                                circle.stopDrag();
+                                lineFusion(circle);
+                            }
+                            break;
+                        case 2:
+                            let firstCircle = circles[0];
+                            let secondCircle = circles[1];
+                            let firstID = firstCircle.attrs['id'].split('-');
+                            let secondID = secondCircle.attrs['id'].split('-');
+                            let firstLine = getLine(firstID[0])
+                            if(firstID[0] == secondID[0]) {
+                                firstLine.points().pop();
+                                firstLine.points().pop();
+                                firstLine.closed(true);
+                                remakeDots(firstID[0]);
+                            } else {
+                                let secondLine = getLine(secondID[0]);
+                                if(firstID[1] == 0) {
+                                    invertLinePoints(firstLine)
+                                }
+                                secondLine.points().pop();
+                                secondLine.points().pop();
+                                invertLinePoints(secondLine);
+                                concatLines(firstLine, secondLine);
+                                deleteDots(firstID[0]);
+                                firstLine.destroy();
+                                remakeDots(secondID[0]);
+                            }
+
+                            break;
+                        default:
 
                     }
+                    // if(currentCircle != undefined) {
+                    //     circle = findOtherCircle(currentCircle.attrs['id'], clickPos);
+                    //     if(circle != undefined) {
+                    //         lineFusion(circle);
+                    //     }
+                    // } else {
+                        // circle = findCircle(clickPos);
+                    // }
+                        // if(circle != undefined) {
+                        //
+                        // } else {
+
+                    // }
                 } else {
                     dragged = false;
                 }
@@ -1021,6 +1043,33 @@ function initCanvas() {
             var coord = "x=" + x + ", y=" + y;
         }
     }, false);
+
+    // divCanvas.addEventListener('mousemove', function () {
+    //     if(modeCanvas == 4 && constructMode) {
+    //         let clickPos = stage.getPointerPosition();
+    //         clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
+    //         clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+    //         let circle = findCircle(clickPos);
+    //         if(!firstPointAdded) {
+    //             // poly.points()[poly.points().length - 2] = clickPos.x;
+    //             // poly.points()[poly.points().length - 1] = clickPos.y;
+    //             // poly.points().pop();
+    //         // } else {
+    //             // firstPointAdded = true;
+    //             // poly.points().push(clickPos.x);
+    //             // poly.points().push(clickPos.y);
+    //             // currentCircle = create1Dot(clickPos.x, clickPos.y, poly.attrs['id'] + '-' + (poly.points().length / 2 - 1).toString());
+    //             // currentCircle.startDrag();
+    //         }
+    //         // if(currentCircle != undefined) {
+    //         //     currentCircle.x(clickPos.x);
+    //         //     currentCircle.y(clickPos.y);
+    //         // } else {
+    //         //     remakeDots(poly.attrs['id']);
+    //         // }
+    //         layer.draw();
+    //     }
+    // });
 
 }
 
@@ -1966,13 +2015,14 @@ function create1Dot(x, y, idCircle) {
     circle.on('mousedown', function (e) {
         clickType = e.evt.button;
     });
-
     circle.on('dragmove', function (e) {
         // if(e.evt.button == 1) {
             createDot = false;
             newLineBool = false;
-            poly = undefined;
-            nbPoints = 0;
+            // poly = undefined;
+            // if(!tmpDot) {
+                nbPoints = 0;
+            // }
             let diffX = this.x() - oldPos[0];
             let diffY = this.y() - oldPos[1];
             let id = this.attrs['id'];
@@ -2047,6 +2097,24 @@ function create1Dot(x, y, idCircle) {
     return circle;
 }
 
+function createTempDot(idLine) {
+    let clickPos = getCLickPos();
+    let line = getLine(idLine);
+    poly = line;
+    line.points().push(clickPos.x);
+    line.points().push(clickPos.y);
+    //destroy all the dots of the line to easily find the currently dragged dot
+    // and create the new dot at the same time, it's overkill but isn't that
+    // heavy for the app
+    remakeDots(idLine);
+    let dot = getDot((line.points().length / 2 - 1).toString(), idLine);
+    currentCircle = dot;
+    clickType = 1; //trick not to stop the drag
+    tmpDot = true;
+    dot.startDrag();
+    ++nbPoints;
+}
+
 function creerLigne(ptsLigne) {
     var poly = new Konva.Line({
         points: ptsLigne,
@@ -2098,7 +2166,7 @@ function creerLigne(ptsLigne) {
                         if(circle != undefined) {
                             idCircle = findCircle(clickPos).attrs['id'].split('-');
                             if(idCircle[1] == 0 || idCircle[1] == getLine(idCircle[0]).getPoints().length / 2 - 1) {
-                                lineFusion(e);
+                                lineFusion(dot);
                             }
                         }
                         break;
@@ -2205,16 +2273,16 @@ function creerLigne(ptsLigne) {
             // }
         }
     });
-    poly.on('mouseup', function () {
-        mousedwn = false;
-        cliqueDroit = false;
-        let movingCircle = layer.getChildren(function(node){return node.isDragging()})[0]
-        if(movingCircle != undefined){
-            //Security if an error occurs and a circle is endlessly being dragged
-            movingCircle.stopDrag();
-            // nbPoints = this.points().length / 2 - 1;
-        }
-    });
+    // poly.on('mouseup', function () {
+    //     mousedwn = false;
+    //     cliqueDroit = false;
+    //     let movingCircle = layer.getChildren(function(node){return node.isDragging()})[0]
+    //     if(movingCircle != undefined){
+    //         //Security if an error occurs and a circle is endlessly being dragged
+    //         movingCircle.stopDrag();
+    //         // nbPoints = this.points().length / 2 - 1;
+    //     }
+    // });
     poly.on('click', function () {
         switch (modeCanvas) {
             case 5:
@@ -2314,7 +2382,40 @@ function findCircle(clickPos) {
     let res = undefined;
     for(let i = 0; !founded && i < allCircles.length; ++i) {
         if(distance([clickPos.x, clickPos.y], [allCircles[i].x(), allCircles[i].y()]) < allCircles[i].outerRadius()) {
+            // if(allCircles[i].attrs['id'] != currentCircle.attrs['id']) {
+                res = allCircles[i];
+                founded = true;
+            // }
+        }
+    }
+    return res;
+}
+
+function findSeveralCircles(clickPos) {
+    let allCircles = getAllDots();
+    let founded = false;
+    let res = [];
+    for(let i = 0; !founded && i < allCircles.length; ++i) {
+        if(distance([clickPos.x, clickPos.y], [allCircles[i].x(), allCircles[i].y()]) < allCircles[i].outerRadius()) {
+            // if(allCircles[i].attrs['id'] != currentCircle.attrs['id']) {
+                res.push(allCircles[i]);
+                // founded = true;
+            // }
+        }
+    }
+    return res;
+}
+
+function findOtherCircle(idCircle, clickPos) {
+    let allCircles = layer.getChildren(function (node) {
+        return node.getClassName() === 'Arc' && node.attrs['id'] != idCircle;
+    });
+    let founded = false;
+    let res = undefined;
+    for(let i = 0; !founded && i < allCircles.length; ++i) {
+        if(distance([clickPos.x, clickPos.y], [allCircles[i].x(), allCircles[i].y()]) < allCircles[i].outerRadius()) {
             res = allCircles[i];
+            founded = true;
         }
     }
     return res;
@@ -2362,6 +2463,14 @@ function getAllLines() {
 
 }
 
+function getCLickPos() {
+    let clickPos = stage.getPointerPosition();
+    clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
+    clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+
+    return clickPos;
+}
+
 function getDot(idPoint, idLigne) {
     /*
     Retourne le point spécifié
@@ -2394,10 +2503,8 @@ function getLine(idLigne) {
     return line[0];
 }
 
-function lineFusion(e) {
-    let clickPos = stage.getPointerPosition();
-    clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-    clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+function lineFusion(dot) {
+    let clickPos = getCLickPos();
     circle = findCircle(clickPos);
     let idPoint = circle.attrs['id'];
     newLine = getLine(idPoint.split('-')[0]);
@@ -2434,19 +2541,12 @@ function lineFusion(e) {
 
 
         } else {
-            poly.closed(true);
-            layer.draw();
+            if(!constructMode) {
+                poly.closed(true);
+                layer.draw();
+            }
         }
         resetCorrection();
-        // nbPoints = 0;
-        // newLineBool = true;
-        // createDot = false;
-        // poly = undefined;
-        // readyToMerge = false;
-        // constructMode = false;
-        // firstPointAdded = false;
-
-
     } else {
         if(idPoint.split('-')[1] != newLine.points().length / 2 - 1) {
             //If the point is the beginning of the line, we invert the
@@ -2462,6 +2562,7 @@ function lineFusion(e) {
         constructMode = true;
         remakeDots(poly.attrs['id']);
         nbPoints = poly.points().length / 2 - 1;
+        createTempDot(poly.attrs['id']);
     }
 }
 
@@ -2498,6 +2599,12 @@ function remakeDots(idLine) {
 }
 
 function resetCorrection() {
+    if(tmpDot) {
+        poly.points().pop();
+        poly.points().pop();
+        remakeDots(poly.attrs['id']);
+        tmpDot = false;
+    }
     nbPoints = 0;
     newLineBool = true;
     createDot = false;
