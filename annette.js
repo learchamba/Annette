@@ -762,7 +762,7 @@ function init() {
 
         document.getElementById("imageL"+i).onwheel = function (e) {
                 e.preventDefault();
-                pictureScroll += (e.deltaY/Math.abs(e.deltaY)) * 0.2;
+                pictureScroll += (e.deltaY/Math.abs(e.deltaY)) * 0.4;
                 if(pictureScroll > 1){
                     pictureScroll = 0;
                     if(debutListe < listeImages.length - 4) {
