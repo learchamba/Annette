@@ -45,6 +45,7 @@ var correctionLine = false;
 var niveauZoom = 1;
 var oldPos = [];
 var oldPosStage = [];
+var pictureScroll = 0;
 var pointsEllipse;
 var pointCreated;
 var poly;
@@ -758,6 +759,24 @@ function init() {
                     }
                 }
             });
+
+        document.getElementById("imageL"+i).onwheel = function (e) {
+                e.preventDefault();
+                pictureScroll += (e.deltaY/Math.abs(e.deltaY)) * 0.2;
+                if(pictureScroll > 1){
+                    pictureScroll = 0;
+                    if(debutListe < listeImages.length - 4) {
+                        ++debutListe;
+                        afficheListeImages();
+                    }
+                } else if(pictureScroll < 0) {
+                    pictureScroll = 1;
+                    if(debutListe > 0) {
+                        --debutListe;
+                        afficheListeImages();
+                    }
+                }
+            };
     }
     nbElem = 0;
     initRaccourcis();
