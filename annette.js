@@ -2231,6 +2231,7 @@ function creerLigne(ptsLigne) {
                     case 4:
                     if(layer.getChildren(function(node) {return node.isDragging() && node.getClassName() === 'Arc'}).length == 0) {
                         if(circle != undefined) {
+                            stage.stopDrag();
                             circle.startDrag();
                         } else {
                             stage.draggable(false);
@@ -2315,6 +2316,12 @@ function creerLigne(ptsLigne) {
 
         }
 
+    });
+
+    poly.on('mouseup', function() {
+        if(clickType == 2) {
+            stopAllDrag();
+        }
     });
 
     if(modeCanvas == 3) {
@@ -2643,6 +2650,17 @@ function resetCorrection() {
     readyToMerge = false;
     constructMode = false;
     firstPointAdded = false;
+}
+
+function stopAllDrag() {
+    let elem = layer.getChildren(function(node){
+        return node.isDragging();
+    });
+    for(i = 0; i < elem.length; ++i) {
+        elem[i].stopDrag();
+    }
+    stage.stopDrag();
+
 }
 
 //Gestion de l'export textuel
