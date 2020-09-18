@@ -1980,6 +1980,7 @@ function create1Dot(x, y, idCircle) {
 
     circle.on('dragstart', function () {
         if(clickType == 2) {
+            this.stroke('green');
             oldPos[0] =  this.x();
             oldPos[1] =  this.y();
             isCircleDragged = true;
@@ -2022,17 +2023,19 @@ function create1Dot(x, y, idCircle) {
     });
 
     circle.on('dragend', function () {
+        this.stroke('red');
+        layer.draw();
         if(tmpDot && clickType == 2) {
             this.startDrag();
         } else if(!(sontEnvironEgalesProportionnelles(oldPos[0], this.x())
                 && sontEnvironEgalesProportionnelles(oldPos[1], this.y()))) {
-                createDot = false;
-                newLineBool = false;
-                poly = undefined;
-                nbPoints = 0;
-                isCircleDragged = false;
-                dragged = true;
-            }
+            createDot = false;
+            newLineBool = false;
+            poly = undefined;
+            nbPoints = 0;
+            isCircleDragged = false;
+            dragged = true;
+        }
     });
     circle.on('click', function (e) {
         clickType = e.evt.button;
@@ -2658,6 +2661,7 @@ function stopAllDrag() {
     });
     for(i = 0; i < elem.length; ++i) {
         elem[i].stopDrag();
+        elem[i].stroke('red');
     }
     stage.stopDrag();
 
