@@ -2020,10 +2020,9 @@ function create1Dot(x, y, idCircle) {
         //     this.stopDrag();
         // }
     });
+
     circle.on('dragend', function () {
-        // if(e.evt.button == 1) {
         if(tmpDot && clickType == 2) {
-            // clickType = 2;
             this.startDrag();
         } else if(!(sontEnvironEgalesProportionnelles(oldPos[0], this.x())
                 && sontEnvironEgalesProportionnelles(oldPos[1], this.y()))) {
@@ -2034,7 +2033,6 @@ function create1Dot(x, y, idCircle) {
                 isCircleDragged = false;
                 dragged = true;
             }
-        // }
     });
     circle.on('click', function (e) {
         clickType = e.evt.button;
@@ -2149,7 +2147,6 @@ function creerLigne(ptsLigne) {
                     case 4:
                         if(layer.getChildren(function(node) {return node.isDragging() && node.getClassName() === 'Arc'}).length == 0) {
                             if(circle != undefined) {
-                                // circle.startDrag();
 
                             } else {
 
@@ -2232,16 +2229,73 @@ function creerLigne(ptsLigne) {
             case 2:
                 switch (modeCanvas) {
                     case 4:
+                    if(layer.getChildren(function(node) {return node.isDragging() && node.getClassName() === 'Arc'}).length == 0) {
                         if(circle != undefined) {
                             circle.startDrag();
+                        } else {
+                            stage.draggable(false);
+                            let idLigne = this.attrs['id'];
+                            let added = false;
+                            let i = 0;
+                            let pts = this.points();
+                            while(!added && i < pts.length - 3) {
+                                let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
+                                let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
+                                // console.log(v1, v2);
+                                let angle = getAngle(v1, v2);
+                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                    let circles = getDots(idLigne);
+                                    let zInd = circles[(i + 2) / 2].zIndex();
+                                    let newPoints = this.points().slice(0, i + 2);
+                                    newPoints.push(clickPos.x);
+                                    newPoints.push(clickPos.y);
+                                    newPoints = newPoints.concat(this.points().slice(i + 2));
+                                    this.points(newPoints);
+                                    let idPoint = idLigne + '-' + (i + 2) / 2;
+                                    // console.log('Décalage :');
+                                    remakeDots(idLigne);
+                                    // decaleIDCercles(1, (i + 2) / 2, idLigne);
+                                    // var dot = create1Dot(clickPos.x, clickPos.y, idPoint);
+                                    // dot.zIndex(zInd);
+                                    // var dot = getDot(idLigne, idPoint.split('-')[1]);
+                                    added = true;
+                                    layer.draw();
+                                }
+                                i+=2;
+                            }
+                            if(this.closed() && !added && i == pts.length - 2) {
+                                let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
+                                let angle = getAngle(v1, v2);
+                                let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
+                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                    let circles = getDots(idLigne);
+                                    let zInd = circles[circles.length - 1].zIndex() + 1;
+                                    this.points().push(clickPos.x);
+                                    this.points().push(clickPos.y);
+                                    let idPoint = idLigne + '-' + circles.length;
+                                    remakeDots(idLigne);
+                                    // var dot = create1Dot(clickPos.x, clickPos.y, idPoint);
+                                    // dot.zIndex(zInd);
+                                    // var dot = getDot(idLigne, idPoint.split('-')[1]);
+                                    added = true;
+                                    layer.draw();
+                                }
+                            }
+                            let dot = findCircle(clickPos);
+                            if(dot != undefined) {
+                                mousedwn = true;
+                                clickType = 2;
+                                dot.startDrag();
+                            }
                         }
-                        break;
-                    default:
                     }
 
+
+                        break;
+                    default:
+                }
                 break;
             default:
-
         }
     });
     poly.on('click', function () {
