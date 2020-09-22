@@ -1,63 +1,66 @@
 // import * from "./onnx.ts";
 
-var btnMasquer;
-var btnChargement;
+var btnLoad;
+var btnMask;
 var canvas;
-var chargementVideo = false;
+var loadVideo = false;
+var clickAdd = 0; //left click
+var clickDelete = 1; //wheel click
+var clickDrag = 2; // right click
 var clickType;
 var constructMode;
 var createDot;
 var ctx;
 var currentCircle;
-var debutListe = 0;
+var listBeginning = 0;
 var deletedDot = false;
-var distanceVisibleMin;
-var divImgPrinc;
+var minVisibleDistance;
+var divMainImg;
 var dragged;
-var ecartPointsImportants = 10;
-var ellipseCliquee = 0;
+var gapImportantPoints = 10;
+var ellipseClicked = 0;
 var ellipseFinished = false;
 var ellipseTmp = undefined;
 var firstPointAdded = false;
-var hauteurInference = 270;
+var inferenceHeight = 270;
 var idEllipse;
-var imageCourante;
-var imageMasque;
-var indiceImageCourante;
-var indiceImages;
-var indiceListe;
+var currentPicture;
+var currentPictureIndex;
+var picturesIndex;
+var listIndex;
 var initialPosStage;
 var input;
 var intervalIDLoadImage;
 var isCircleDragged = false;
-var largeurInference = 480;
+var inferenceWidth = 480;
 var layer;
 var layerBkgrd;
-var listeImages = [];
+var pictureList = [];
 var longClick = 500;
-var masqueVisible = true;
+var isMaskVisible = true;
+var leftMouseDown = false;
 var mousedwn = true;
 var nbElem;
 var nbFrame;
 var nbPoints = 0;
-var newLineBool;// = true;
+var newLineBool;
 var newLine;
 var correctionLine = false;
-var niveauZoom = 1;
+var zoomLevel = 1;
 var oldPos = [];
 var oldPosStage = [];
 var pictureScroll = 0;
 var pointsEllipse;
 var pointCreated;
 var poly;
-var ptsLigne;
-var rapportImageInferenceX;
-var rapportImageInferenceY;
+var linePoints;
+var xPictureInferenceRatio;
+var yPictureInferenceRatio;
 var ratioX;
 var ratioY;
 var readyToMerge;
-var rectFond;
-var rectNoir;
+var backgroundRect;
+var blackRect;
 var selected = [];
 var stage;
 var tmpDot = false;
@@ -79,17 +82,10 @@ window.onload = init;
 
 //Inits
 function init() {
-    btnMasquer = document.getElementById('btnMasquer');
-    imageMasque = document.getElementById('imageMasque');
-    btnChargement = document.getElementById('btnChargement');
-    divImgPrinc = document.getElementById('divImagePrincipale');
-    imageCourante = document.getElementById('imageCourante');
-
-    /*
-     censé empêcher l'anti aliasing sur l'image de base,
-     ne change rien à part décaler la stage
-    */
-    // imageCourante.style = imageCourante.style + " image-rendering: optimizeSpeed; image-rendering: -moz-crisp-edges; image-rendering: -o-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: pixelated; image-rendering: optimize-contrast; -ms-interpolation-mode: nearest-neighbor; "
+    btnMask = document.getElementById('btnMasquer');
+    btnLoad = document.getElementById('btnChargement');
+    divMainImg = document.getElementById('divImagePrincipale');
+    currentPicture = document.getElementById('imageCourante');
 
     document.getElementById('btnDefileHaut').addEventListener('click',defileHaut);
     document.getElementById('btnDefileBas').addEventListener('click',defileBas);
@@ -99,12 +95,12 @@ function init() {
         if(modeCanvas === 4){
             modeCanvas = 0;
             document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg";
-            if(niveauZoom != 1)
+            if(zoomLevel != 1)
                 stage.draggable(true);
             for(var i = 0; i < layer.getChildren().length; ++i) {
                 layer.getChildren()[i].draggable(false);
             }
-            ellipseCliquee = 0;
+            ellipseClicked = 0;
             var trns = layer.getChildren(function (node) {
                 return node.getClassName() === 'Transformer';
             })[0];
@@ -117,7 +113,6 @@ function init() {
             boutonsOff();
             modeCanvas = 4;
             document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
-            // stage.draggable(false);
             let circles = getAllDots();
             for(var i = 0; i < circles.length; ++i) {
                 circles[i].draggable(true);
@@ -174,15 +169,14 @@ function init() {
     });
 
     document.getElementById('btnValider').addEventListener(('click'), function () {
-        // $("body").append("<a href='" + stage.toDataURL() + "' id='DLCanvas' download='annotation" + indiceImageCourante + ".jpg'>");
         maskArcs();
         var y = document.getElementById("DLCanvas");
-        let nomImage = listeImages[indiceImageCourante - 1].name.split('.')[0];
+        let nomImage = pictureList[currentPictureIndex - 1].name.split('.')[0];
         killTransformers();
-        ratioY = imageCourante.naturalHeight / imageCourante.height;
-        ratioX = imageCourante.naturalWidth / imageCourante.width;
-        rapportImageInferenceX = imageCourante.width / largeurInference;
-        rapportImageInferenceY = imageCourante.height / hauteurInference;
+        ratioY = currentPicture.naturalHeight / currentPicture.height;
+        ratioX = currentPicture.naturalWidth / currentPicture.width;
+        xPictureInferenceRatio = currentPicture.width / inferenceWidth;
+        yPictureInferenceRatio = currentPicture.height / inferenceHeight;
 
         let cptInput = 0;
         let nomFicText;
@@ -224,29 +218,6 @@ function init() {
         if(inputMasque.checked) {
             ++cptInput;
             prepareMask();
-            // let image = new Konva.Image();
-            // image.image(stage.toImage({callback(img){
-            //     image.image(img);
-            // }}));
-            // image.cache();
-            // // image.filters([Konva.Filters.Threshold]);
-            // var OpacityFilter = function (imageData) {
-            //
-            //   var nPixels = imageData.data.length;
-            //   for (var i = 0; i < nPixels; i += 1) {
-            //     if(imageData.data[i] != 0 && imageData.data[i] != 255){
-            //         if(imageData.data[i] > 128) {
-            //             imageData.data[i] = 255;
-            //         } else {
-            //             imageData.data[i] = 0;
-            //         }
-            //         console.log(i);
-            //     }
-            //   }
-            // };
-            // image.filters[OpacityFilter];
-            // // image.threshold(0.5);
-            // y.href = image.toDataURL();
 
             y.href = stage.toDataURL();
             nomFicMasque = 'masque-' + nomImage + '.png';
@@ -254,19 +225,6 @@ function init() {
             y.addEventListener('change', downloadimage, false);
             maskData = y.href;
             setMaskToNormal();
-
-
-            // setTimeout(function(){}, 5000);
-            // image.filters([Konva.Filters.Threshold]);
-            // image.threshold(0.5);
-            // y.href = image.toDataURL();
-            //
-            // // y.href = stage.toDataURL();
-            // nomFicMasque = 'masque-' + nomImage + '.png';
-            // y.download = nomFicMasque;
-            // y.addEventListener('change', downloadimage, false);
-            // maskData = y.href;
-            // setMaskToNormal();
         }
         if(cptInput > 1) {
             var zip = new JSZip();
@@ -307,11 +265,11 @@ function init() {
     });
 
     document.getElementById('btnZoomPlus').addEventListener(('click'), function () {
-        if(niveauZoom <8) {
-            niveauZoom*=2;
+        if(zoomLevel <8) {
+            zoomLevel*=2;
             var layerBkg = stage.getLayers()[0];
-            layerBkg.scale({x: niveauZoom, y: niveauZoom});
-            layer.scale({x: niveauZoom, y: niveauZoom});
+            layerBkg.scale({x: zoomLevel, y: zoomLevel});
+            layer.scale({x: zoomLevel, y: zoomLevel});
             if(modeCanvas != 4)
                 stage.draggable(true);
 
@@ -322,29 +280,29 @@ function init() {
     });
 
     document.getElementById('btnZoomMoins').addEventListener(('click'), function () {
-        if(niveauZoom > 1) {
-            niveauZoom/=2;
+        if(zoomLevel > 1) {
+            zoomLevel/=2;
             var layerBkg = stage.getLayers()[0];
-            layerBkg.scale({x: niveauZoom, y: niveauZoom});
-            layer.scale({x: niveauZoom, y: niveauZoom});
+            layerBkg.scale({x: zoomLevel, y: zoomLevel});
+            layer.scale({x: zoomLevel, y: zoomLevel});
             stage.x(initialPosStage[0]);
             stage.y(initialPosStage[1]);
             layerBkg.draw();
             layer.draw();
-            if(niveauZoom === 1) {
+            if(zoomLevel === 1) {
                 stage.draggable(false);
             }
-            imageCourante.scale
+            currentPicture.scale
         }
     });
 
-    btnMasquer.addEventListener('click', masquerMasque);
-    btnChargement.addEventListener('click', load1Picture);
+    btnMask.addEventListener('click', masquerMasque);
+    btnLoad.addEventListener('click', load1Picture);
 
     initCanvas();
-    document.getElementById('btnAnnuler').addEventListener('click', annulerAnnotation);
+    document.getElementById('btnAnnuler').addEventListener('click', cancelAnnotation);
 
-    imageCourante.addEventListener('load', function () {
+    currentPicture.addEventListener('load', function () {
         var canvasWidth = this.clientWidth;
         var canvasHeight = this.clientHeight;
         stage = new Konva.Stage({
@@ -354,10 +312,9 @@ function init() {
         });
         initialPosStage = [stage.x(), stage.y()];
         layerBkgrd = new Konva.Layer();
-        // layerBkgrd.getContext().imageSmoothingEnabled = false;
         var imgBkgrd = new Image();
         imgBkgrd.src = './fondNoir.png';
-        rectNoir = new Konva.Rect( {
+        blackRect = new Konva.Rect( {
                 x: 0,
                 y: 0,
                 width: canvasWidth,
@@ -368,11 +325,11 @@ function init() {
                 fillPatternScaleY: canvasHeight/imgBkgrd.height,
                 id: 'imgNoire',
             });
-        layerBkgrd.add(rectNoir);
+        layerBkgrd.add(blackRect);
 
         imgBkgrd = new Image();
         imgBkgrd.src = this.src;
-        rectFond = new Konva.Rect( {
+        backgroundRect = new Konva.Rect( {
                 x: 0,
                 y: 0,
                 width: canvasWidth,
@@ -383,40 +340,27 @@ function init() {
                 fillPatternScaleY: canvasHeight/imgBkgrd.height,
                 id: 'imgBackground',
             });
-        layerBkgrd.add(rectFond);
+        layerBkgrd.add(backgroundRect);
         stage.add(layerBkgrd);
         layerBkgrd.draw();
         layer = new Konva.Layer();
         stage.add(layer);
 
-        // stage.on('mouseup', function () {
-        //     console.log('mouseup stage');
-        // });
-
         stage.on('dragstart', function (e) {
-            // createDot = false;
-            if(clickType == 2) {
-                oldPosStage = [stage.x()/niveauZoom, stage.y()/niveauZoom];
+            if(clickType == clickDrag) {
+                oldPosStage = [stage.x()/zoomLevel, stage.y()/zoomLevel];
                 dragged = true;
             } else {
                 stage.stopDrag();
             }
         });
-        // stage.on('dragmove', function (e) {
-        //     // createDot = false;
-        // });
+
         stage.on('dragend', function (e) {
-            let newPos = [stage.x()/niveauZoom, stage.y()/niveauZoom];
+            let newPos = [stage.x()/zoomLevel, stage.y()/zoomLevel];
             if(distance(oldPosStage,newPos) < 3) {
                 dragged = false;
             } else {
                 dragged = true;
-            }
-            if(tmpDot) {
-                let circle = findCircle(getCLickPos());
-                // if(circle != undefined) {
-                //     circle.startDrag();
-                // }
             }
         });
 
@@ -425,23 +369,9 @@ function init() {
                 clickType = e.evt.button;
                 pointCreated = false;
                 switch (clickType) {
-                    case 0:
-                        // if(modeCanvas == 4 && !readyToMerge) {
-                        //     startTime = Date.now();
-                        //     dragged = false;
-                        //     if(e.target.getClassName() !== 'Arc') {
-                        //         let clickPos = stage.getPointerPosition();
-                        //         clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-                        //         clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
-                        //         let circle = findCircle(clickPos);
-                        //         if(circle != undefined){
-                        //             circle.startDrag();
-                        //             stage.draggable(false);
-                        //         }
-                        //     }
-                        // }
+                    case clickAdd:
                         break;
-                    case 1:
+                    case clickDelete:
                         switch(modeCanvas) {
                             case 1:
                             case 3:
@@ -451,7 +381,6 @@ function init() {
                                 let clickPos = getCLickPos();
                                 if(e.target.getClassName() === "Arc") {
                                     deleteDot(e.target);
-                                    // e.target.destroy();
                                 } else if(e.target.getClassName() === "Line") {
                                     if(deletedDot) {
                                         deletedDot = false;
@@ -473,15 +402,6 @@ function init() {
                                                     line.closed(false);
                                                     deleteDots(idLigne);
                                                     remakeDots(idLigne);
-                                                    // let circles = getDots(idLigne);
-                                                    // // for(let j = circles.length - 1; j >= 0; --j) {
-                                                    // //     circles[j].destroy();
-                                                    // // }
-                                                    //
-                                                    // for(let j = 0; j < line.points().length; j += 2) {
-                                                    //     let idCercle = idLigne + '-' + j / 2;
-                                                    //     create1Dot(line.points()[j], line.points()[j + 1], idCercle);
-                                                    // }
                                                     deleted = true;
                                                 } else {
                                                     i += 2;
@@ -503,8 +423,6 @@ function init() {
                                              concaténant à l'autre bout
                                             */
                                         } else {
-                                            // clickPos.x = (clickPos.x  - stage.x())/ niveauZoom;
-                                            // clickPos.y = (clickPos.y  - stage.y())/ niveauZoom;
                                             let deleted = false;
                                             let i = 0;
                                             let pts = e.target.points();
@@ -516,22 +434,22 @@ function init() {
                                                     if(i + 3 == pts.length - 1) {
                                                         e.target.points().pop();
                                                         e.target.points().pop();
-                                                    } if(i == 0) {
+                                                    } else if(i == 0) {
                                                         e.target.points().shift();
                                                         e.target.points().shift();
                                                     } else {
                                                         let pointsLigne1 = pts.slice(0, i+2);
                                                         let pointsLigne2 = pts.slice(i+2);
                                                         e.target.points(pointsLigne1);
-                                                        remakeDots(e.target.attrs['id']);
 
                                                         if(pointsLigne2.length > 2) {
-                                                            let poly = creerLigne([pointsLigne2[0],pointsLigne2[1]]);
+                                                            let poly = createLine([pointsLigne2[0],pointsLigne2[1]]);
                                                             poly.points(pointsLigne2);
                                                             layer.add(poly);
                                                             remakeDots(poly.attrs['id']);
                                                         }
                                                     }
+                                                    remakeDots(e.target.attrs['id']);
                                                     if(e.target.points().length <= 2) {
                                                         deleteDots(e.target.attrs['id']);
                                                         e.target.destroy();
@@ -564,30 +482,23 @@ function init() {
                             default:
                                 console.log("Pas de clique milieu dans ce mode.");
                                 let test = stage.getPointerPosition();
-                                test.x = (test.x  - stage.x()) / niveauZoom;
-                                test.y = (test.y  - stage.y()) / niveauZoom;
+                                test.x = (test.x  - stage.x()) / zoomLevel;
+                                test.y = (test.y  - stage.y()) / zoomLevel;
                                 console.log(test);
                         }
                         break;
-                    case 2 :
-                        if(modeCanvas == 4) {
+                    case clickDrag :
+                        if(!leftMouseDown && modeCanvas == 4) {
                             if(e.target.getClassName() !== 'Arc') {
-                                // if(dragged) {
-                                //         dragged = false;
-                                // } else {
-                                    let clickPos = getCLickPos();
-                                    let circle = findCircle(clickPos);
-                                    if(!tmpDot && circle != undefined){
-                                        circle.startDrag();
-                                        stage.draggable(false);
-                                    } else if(niveauZoom > 1) {
-                                        // if(circle != undefined) {
-                                        //     circle.stopDrag();
-                                        // }
-                                        stage.draggable(true);
-                                        stage.startDrag();
-                                    }
-                                // }
+                                let clickPos = getCLickPos();
+                                let circle = findCircle(clickPos);
+                                if(!tmpDot && circle != undefined){
+                                    circle.startDrag();
+                                    stage.draggable(false);
+                                } else if(zoomLevel > 1) {
+                                    stage.draggable(true);
+                                    stage.startDrag();
+                                }
                             }
                         }
                         break;
@@ -603,13 +514,14 @@ function init() {
         var scaleBy = 1.05;
 
         stage.dragBoundFunc(function (pos) {
+            /* limits the movements of the stage in its area*/
             var newX;
             var newY;
             if(pos.x > 0) {
                 newX = 0;
             } else {
-                if(pos.x < -stage.width()*(niveauZoom-1)) {
-                    newX = -stage.width()*(niveauZoom-1);
+                if(pos.x < -stage.width()*(zoomLevel-1)) {
+                    newX = -stage.width()*(zoomLevel-1);
                 } else {
                     newX = pos.x;
                 }
@@ -618,8 +530,8 @@ function init() {
             if(pos.y > 0) {
                 newY = 0;
             } else {
-                if(pos.y < -stage.height()*(niveauZoom-1)) {
-                    newY = -stage.height()*(niveauZoom-1);
+                if(pos.y < -stage.height()*(zoomLevel-1)) {
+                    newY = -stage.height()*(zoomLevel-1);
                 } else {
                     newY = pos.y;
                 }
@@ -642,17 +554,17 @@ function init() {
             var newScale =
             e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
             if(newScale >= 1 && newScale <= 8){
-                niveauZoom = newScale;
+                zoomLevel = newScale;
                 if(newScale == 1) {
                     stage.draggable(false);
                 } else {
                     stage.draggable(true);
                 }
             }
-            stage.scale({ x: niveauZoom, y: niveauZoom });
+            stage.scale({ x: zoomLevel, y: zoomLevel });
             var newPos = {
-            x: pointer.x - mousePointTo.x * niveauZoom,
-            y: pointer.y - mousePointTo.y * niveauZoom,
+            x: pointer.x - mousePointTo.x * zoomLevel,
+            y: pointer.y - mousePointTo.y * zoomLevel,
             };
             if(oldScale > newScale) {
                 let newX;
@@ -661,8 +573,8 @@ function init() {
                 if(pos.x > 0) {
                     newX = 0;
                 } else {
-                    if(pos.x < -stage.width()*(niveauZoom - 1)) {
-                        newX = -stage.width()*(niveauZoom - 1);
+                    if(pos.x < -stage.width()*(zoomLevel - 1)) {
+                        newX = -stage.width()*(zoomLevel - 1);
                     }
                 }
                 if(newX != undefined) {
@@ -673,8 +585,8 @@ function init() {
                 if(pos.y > 0) {
                     newY = 0;
                 } else {
-                    if(pos.y < -stage.height()*(niveauZoom - 1)) {
-                        newY = -stage.height()*(niveauZoom - 1);
+                    if(pos.y < -stage.height()*(zoomLevel - 1)) {
+                        newY = -stage.height()*(zoomLevel - 1);
                     }
                 }
                 if(newY != undefined) {
@@ -687,9 +599,7 @@ function init() {
             }
             stage.batchDraw();
         });
-        // modeCanvas = 0;
-        // btnCorrection.click();
-        niveauZoom = 1;
+        zoomLevel = 1;
 
     }, false);
 
@@ -700,8 +610,8 @@ function init() {
     for(var i = 1; i<5; ++i) {
         document.getElementById("imageL"+i).addEventListener('dblclick', function (e) {
             document.getElementById('imageCourante').src = e.target.src;
-            indiceImageCourante = debutListe + parseInt(e.target.id.charAt(e.target.id.length-1));
-            document.getElementById('nomImageCourante').innerHTML = listeImages[indiceImageCourante - 1].name;
+            currentPictureIndex = listBeginning + parseInt(e.target.id.charAt(e.target.id.length-1));
+            document.getElementById('nomImageCourante').innerHTML = pictureList[currentPictureIndex - 1].name;
             nbElem = 0;
 
             chargerMasque();
@@ -709,14 +619,14 @@ function init() {
         document.getElementById("imageL"+i).addEventListener('click',
             function (e) {
                 var indiceFic = parseInt(e.target.id.charAt(e.target.id.length-1));
-                if(indiceFic <= listeImages.length) {
-                    indiceFic += debutListe - 1;
+                if(indiceFic <= pictureList.length) {
+                    indiceFic += listBeginning - 1;
                     if (!e.target.className.includes("thumbnail")) {
                         e.target.className = "img-fluid img-thumbnail";
-                        selected.push(listeImages[indiceFic]);
+                        selected.push(pictureList[indiceFic]);
                     } else {
                         e.target.className = "img-fluid border";
-                        selected.splice(selected.indexOf(listeImages[indiceFic]), 1);
+                        selected.splice(selected.indexOf(pictureList[indiceFic]), 1);
                     }
                 }
             });
@@ -726,14 +636,14 @@ function init() {
                 pictureScroll += (e.deltaY/Math.abs(e.deltaY)) * 0.4;
                 if(pictureScroll > 1){
                     pictureScroll = 0;
-                    if(debutListe < listeImages.length - 4) {
-                        ++debutListe;
+                    if(listBeginning < pictureList.length - 4) {
+                        ++listBeginning;
                         afficheListeImages();
                     }
                 } else if(pictureScroll < 0) {
                     pictureScroll = 1;
-                    if(debutListe > 0) {
-                        --debutListe;
+                    if(listBeginning > 0) {
+                        --listBeginning;
                         afficheListeImages();
                     }
                 }
@@ -746,35 +656,26 @@ function init() {
 function initCanvas() {
 
     var divCanvas = document.getElementById('divCanvas');
-
-
-
     divCanvas.addEventListener('click',function(e) {
         let clickPos = getCLickPos();
-        if(clickType == 0) {
-            if(ellipseTmp != undefined && pointsEllipse.length === 2) {
+        if(clickType == clickAdd) {
+            if(ellipseTmp != undefined && pointsEllipse.length === 3) {
                 ellipseTmp = undefined;
                 ellipseFinished = true;
             }
             switch(modeCanvas) {
                 case 3:
-                // case 4:
                 case 1:
-                //if point present à cet endroit
-                // let circle = findCircle(clickPos);
-                // if(circle == undefined) {
                     if(nbPoints === 0) {
-
-                        ptsLigne = [];
-                        ptsLigne.push(x);
-                        ptsLigne.push(y);
-                        poly = creerLigne(ptsLigne);
+                        linePoints = [];
+                        linePoints.push(x);
+                        linePoints.push(y);
+                        poly = createLine(linePoints);
                         layer.add(poly);
                         layer.draw();
                         createDot = true;
                         newLineBool = true;
-                    }
-                    else {
+                    } else {
                         if(createDot) {
                             poly.points(poly.points().concat([x, y]));
                         }
@@ -791,19 +692,14 @@ function initCanvas() {
                             nbPoints--;
                         }
                     }
-                // } else {
-
-
-
-
-                break;
+                    break;
                 case 2:
-                while(pointsEllipse.length > 1
-                    && pointsEllipse[0][0] == pointsEllipse[1][0]
-                    && pointsEllipse[0][1] == pointsEllipse[1][1]) {
-                        pointsEllipse.splice(1,1);
-                    }
-                    pointsEllipse.push([x,y]);
+                    while(pointsEllipse.length > 1
+                        && pointsEllipse[0][0] == pointsEllipse[1][0]
+                        && pointsEllipse[0][1] == pointsEllipse[1][1]) {
+                            pointsEllipse.splice(1,1);
+                        }
+                    pointsEllipse.push([clickPos.x,clickPos.y]);
                     ellipseFinished = false;
 
                     if(pointsEllipse.length === 1) {
@@ -827,30 +723,36 @@ function initCanvas() {
                         stage.on('mousemove', function() {
                             if(ellipseTmp != undefined) {
                                 if(pointsEllipse.length == 1) {
-                                    let clickPos = stage.getPointerPosition();
-                                    clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-                                    clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+                                    let clickPos = getCLickPos();
                                     ellipseTmp.radiusY(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
                                     ellipseTmp.radiusX(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
                                     layer.draw();
 
                                 } else if(pointsEllipse.length == 2) {
-                                    let clickPos = stage.getPointerPosition();
-                                    clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-                                    clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
+                                    let clickPos = getCLickPos();
                                     ellipseTmp.radiusY(clickPos.y - pointsEllipse[0][1]);
                                     layer.draw();
                                     modeCanvas = 0;
                                     document.getElementById('btnAjoutEllipse').className =
                                     "btn btn-outline-dark btn-rounded btn-lg";
+                                } else if(pointsEllipse.length == 3) {
+                                    let clickPos = getCLickPos();
+                                    //vertical vector
+                                    let v1 = [0, 90];
+                                    //vector between the center of the ellipse and the pointer
+                                    let v2 = [clickPos.x - ellipseTmp.x, clickPos.y - ellipseTmp.y];
+                                    let angle = getAngle(v1, v2);
+                                    ellipseTmp.rotation(angle);
+                                    layer.draw();
                                 }
+
                             }
                         });
 
                         elli.on('dblclick', function () {
                             if(modeCanvas === 4) {
-                                if(ellipseCliquee) {
-                                    ellipseCliquee = 0;
+                                if(ellipseClicked) {
+                                    ellipseClicked = 0;
                                     var trns = layer.getChildren(function (node) {
                                         return node.getClassName() === 'Transformer';
                                     })[0];
@@ -858,7 +760,7 @@ function initCanvas() {
                                     layer.draw();
                                     this.draggable(false);
                                 } else {
-                                    ellipseCliquee = 1;
+                                    ellipseClicked = 1;
                                     this.draggable(true);
                                     idEllipse = this.attrs['id'];
 
@@ -916,8 +818,8 @@ function initCanvas() {
                             case 0:
                                 pointCreated = true;
                                 if(nbPoints === 0) {
-                                    ptsLigne = [x,y];
-                                    poly = creerLigne(ptsLigne);
+                                    linePoints = [x,y];
+                                    poly = createLine(linePoints);
                                     layer.add(poly);
                                     remakeDots(poly.attrs['id']);
                                     layer.draw();
@@ -1054,7 +956,7 @@ function initRaccourcis() {
         isM=false;
     }).keydown(function (e) {
         if(e.which == 77)  {
-            document.getElementById('btnMasquer').click();
+            document.getElementById('btnMask').click();
             return false;
         }
     });
@@ -1095,7 +997,7 @@ function boutonsOff() {
     document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnSupprAnnotation').className = "btn btn-outline-dark btn-rounded btn-lg";
 
-    if( (modeCanvas === 0 || modeCanvas === 4) && niveauZoom != 1) {
+    if( (modeCanvas === 0 || modeCanvas === 4) && zoomLevel != 1) {
         stage.draggable(true);
     }
 
@@ -1103,7 +1005,7 @@ function boutonsOff() {
         for(var i = 0; i < layer.getChildren().length; ++i) {
             layer.getChildren()[i].draggable(false);
         }
-        ellipseCliquee = 0;
+        ellipseClicked = 0;
         var trns = layer.getChildren(function (node) {
             return node.getClassName() === 'Transformer';
         })[0];
@@ -1136,30 +1038,26 @@ function prepareMask() {
     let lines = getAllLines();
     let ellipses = getAllEllipses();
     maskArcs();
-
     stage.height(270);
     stage.width(480);
-
-    // let rect = layerBkgrd.getChildren(function(node) {return node.attrs['id'].includes('imgBackground');});
-    rectFond.hide();
-    // rectNoir.show();
+    backgroundRect.hide();
 
     for(let i = 0; i < lines.length; ++i) {
         lines[i].stroke('white');
         lines[i].strokeWidth(1);
         for(let j = 0; j < lines[i].points().length; ++j) {
-            lines[i].points()[j] = lines[i].points()[j] / rapportImageInferenceX;
-            lines[i].points()[++j] = lines[i].points()[j] / rapportImageInferenceY;
+            lines[i].points()[j] = lines[i].points()[j] / xPictureInferenceRatio;
+            lines[i].points()[++j] = lines[i].points()[j] / yPictureInferenceRatio;
         }
     }
 
     for(let i = 0; i < ellipses.length; ++i) {
         ellipses[i].stroke('white');
         ellipses[i].strokeWidth(1);
-        ellipses[i].x(ellipses[i].x() / rapportImageInferenceX);
-        ellipses[i].y(ellipses[i].y() / rapportImageInferenceY);
-        ellipses[i].radiusX(ellipses[i].radiusX() / rapportImageInferenceX);
-        ellipses[i].radiusY(ellipses[i].radiusY() / rapportImageInferenceX);
+        ellipses[i].x(ellipses[i].x() / xPictureInferenceRatio);
+        ellipses[i].y(ellipses[i].y() / yPictureInferenceRatio);
+        ellipses[i].radiusX(ellipses[i].radiusX() / xPictureInferenceRatio);
+        ellipses[i].radiusY(ellipses[i].radiusY() / xPictureInferenceRatio);
     }
 }
 
@@ -1168,103 +1066,94 @@ function setMaskToNormal() {
     let ellipses = getAllEllipses();
     showArcs();
 
-    stage.height(imageCourante.height);
-    stage.width(imageCourante.width);
+    stage.height(currentPicture.height);
+    stage.width(currentPicture.width);
 
     for(let i = 0; i < lines.length; ++i) {
         lines[i].stroke('blue');
         lines[i].strokeWidth(3);
         for(let j = 0; j < lines[i].points().length; ++j) {
-            lines[i].points()[j] = lines[i].points()[j] * rapportImageInferenceX;
-            lines[i].points()[++j] = lines[i].points()[j] * rapportImageInferenceY;
+            lines[i].points()[j] = lines[i].points()[j] * xPictureInferenceRatio;
+            lines[i].points()[++j] = lines[i].points()[j] * yPictureInferenceRatio;
         }
     }
-
     for(let i = 0; i < ellipses.length; ++i) {
         ellipses[i].stroke('blue');
         ellipses[i].strokeWidth(1);
-        ellipses[i].x(ellipses[i].x() * rapportImageInferenceX);
-        ellipses[i].y(ellipses[i].y() * rapportImageInferenceY);
-        ellipses[i].radiusX(ellipses[i].radiusX() * rapportImageInferenceX);
-        ellipses[i].radiusY(ellipses[i].radiusY() * rapportImageInferenceX);
+        ellipses[i].x(ellipses[i].x() * xPictureInferenceRatio);
+        ellipses[i].y(ellipses[i].y() * yPictureInferenceRatio);
+        ellipses[i].radiusX(ellipses[i].radiusX() * xPictureInferenceRatio);
+        ellipses[i].radiusY(ellipses[i].radiusY() * xPictureInferenceRatio);
     }
-
-    // let rect = layerBkgrd.getChildren(function(node) {return node.attrs['id'].includes('imgBackground');});
-    // rectNoir.hide();
-    rectFond.show();
+    backgroundRect.show();
     layerBkgrd.draw();
-
-
-    // rect = layerBkgrd.getChildren(function(node) {return node.attrs['id'].includes('imgNoire');});
-    // rect.hide();
-
     layer.draw();
 }
 
 //Gestion des images
 function afficheListeImages() {
-    indiceImages = 1;
-    indiceListe = debutListe;
+    picturesIndex = 1;
+    listIndex = listBeginning;
     intervalIDLoadImage = setInterval(asyncLoadImage, 100);
 }
 
 function asyncLoadImage() {
-    if(indiceListe === debutListe + 4 || indiceListe === listeImages.length) {
+    if(listIndex === listBeginning + 4 || listIndex === pictureList.length) {
         clearInterval(intervalIDLoadImage);
     } else {
-        if(!chargementVideo) {
+        if(!loadVideo) {
             var fr = new FileReader();
             fr.onload = imageHandler;
-            var filename = listeImages[indiceListe];
+            var filename = pictureList[listIndex];
             fr.readAsDataURL(filename);
         } else {
-            document.getElementById('imageL' + indiceImages).src=listeImages[indiceListe];
-            indiceImages++;
+            document.getElementById('imageL' + picturesIndex).src=pictureList[listIndex];
+            picturesIndex++;
         }
-        ++indiceListe;
+        ++listIndex;
     }
 }
 
 function defileHaut() {
     var id;
     var idSuiv = "imageL1";
-    if(debutListe < listeImages.length - 4) {
+    if(listBeginning < pictureList.length - 4) {
         for ( let i = 2; i<5; i++) {
             id=idSuiv;
             idSuiv = "imageL"+i;
             document.getElementById(id).src = document.getElementById(idSuiv).src;
         }
-        if(!chargementVideo) {
+        if(!loadVideo) {
             var fr = new FileReader();
             fr.onload = imageHandler;
-            var filename = listeImages[debutListe + 4];
-            indiceImages = 4;
+            var filename = pictureList[listBeginning + 4];
+            picturesIndex = 4;
             fr.readAsDataURL(filename);
         } else {
-            document.getElementById('imageL4').src=listeImages[debutListe + 4];
+            document.getElementById('imageL4').src=pictureList[listBeginning + 4];
         }
-        debutListe++;
+        listBeginning++;
     }
 }
 
 function defileBas() {
     var id="imageL4";
     var idPrec;
-    if(debutListe <= listeImages.length - 4 && debutListe > 0) {
-        debutListe--;
+    if(listBeginning <= pictureList.length - 4 && listBeginning > 0) {
+        listBeginning--;
         for ( let i = 3; i>0; i--) {
             idPrec=id;
             id = "imageL"+i;
             document.getElementById(idPrec).src = document.getElementById(id).src;
         }
-        if(!chargementVideo) {
+        if(!loadVideo) {
             var fr = new FileReader();
             fr.onload = imageHandler;
-            var filename = listeImages[debutListe];
-            indiceImages = 1;
+            var filename = pictureList[listBeginning];
+            picturesIndex = 1;
             fr.readAsDataURL(filename);
         } else {
-            document.getElementById('imageL1').src=listeImages[debutListe];
+            document.getElementById('imageL1').src=pictureList[listBeginning];
         }
     }
 }
@@ -1299,9 +1188,9 @@ function isRed(pixel) {
 }
 
 function imageHandler(e2) {
-    var idImg = 'imageL'+indiceImages;
+    var idImg = 'imageL'+picturesIndex;
     document.getElementById(idImg).src = e2.target.result;
-    ++indiceImages;
+    ++picturesIndex;
 }
 
 function killTransformers() {
@@ -1325,15 +1214,15 @@ function load1Picture() {
 
 function loadimage(e1) {
     for(var i = 0; i < e1.target.files.length; ++i) {
-        listeImages.push(e1.target.files[i]);
+        pictureList.push(e1.target.files[i]);
     }
     afficheListeImages();
     document.getElementById("explorerChargement").remove();
 }
 
 function realiasing(data) {
-    let width = imageCourante.width;
-    for(let i = 0; i < imageCourante.height; ++i) {
+    let width = currentPicture.width;
+    for(let i = 0; i < currentPicture.height; ++i) {
         for(let j = 0; j < width; ++j) {
             let indice = (i * width + j) * 4;
             if(!isBlack(data.slice(indice, 3))) {
@@ -1356,7 +1245,7 @@ function realiasing(data) {
 function supprImages() {
 
     while(selected.length != 0){
-        listeImages.splice(listeImages.indexOf(selected.shift()),1);
+        pictureList.splice(pictureList.indexOf(selected.shift()),1);
     }
     afficheListeImages();
     for(var i=1;i<5;++i) {
@@ -1399,6 +1288,7 @@ function enleverDoublons(tab) {
 }
 
 function findPos(obj) {
+    /*works everywhere on the document, not only the stage*/
     var curleft = 0, curtop = 0;
     if (obj.offsetParent) {
         do {
@@ -1436,7 +1326,7 @@ function sontEnvironEgales(val1, val2, erreur) {
 
 function sontEnvironEgalesProportionnelles(val1, val2) {
     let ret = false;
-    let erreur = 4 * val1 / 100; //3% de la valeur à comparer
+    let erreur = 4 * val1 / 100; //4% de la valeur à comparer
     if(val1 <= val2 + erreur && val1 >= val2 - erreur) {
         ret = true;
     }
@@ -1462,18 +1352,18 @@ function computeFrame() {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         var dataurl = imagedata_to_image(ctx.getImageData(0,0,canvas.width, canvas.height)).src;
-        listeImages.push(dataurl);
+        pictureList.push(dataurl);
     }
     nbFrame++;
 }
 
 function extractFromVideo() {
-    $("body").append("<input type='file' id='explorerChargementVideo' accept='video/*'>");
-    input = document.getElementById('explorerChargementVideo');
-    var y = document.getElementById("explorerChargementVideo");
+    $("body").append("<input type='file' id='explorerloadVideo' accept='video/*'>");
+    input = document.getElementById('explorerloadVideo');
+    var y = document.getElementById("explorerloadVideo");
     y.addEventListener('change', loadVideo, false);
     input.click();
-    chargementVideo = true;
+    loadVideo = true;
 }
 
 function imagedata_to_image(imagedata) {
@@ -1526,7 +1416,7 @@ function videoHandler(e2) {
     video.muted = true;
     video.playbackRate = 32;
     video.play(true);
-    document.getElementById("explorerChargementVideo").remove();
+    document.getElementById("explorerloadVideo").remove();
 }
 
 //Gestion des masques d'inférence
@@ -1534,7 +1424,6 @@ function chargerMasque() {
 
     $("body").append("<input type='file' id='explorerMasque' accept='image/*' multiple>");
     var inputTmp = document.getElementById('explorerMasque');
-
     var y = document.getElementById("explorerMasque");
     y.addEventListener('change', function (e1) {
         var fr = new FileReader();
@@ -1543,8 +1432,6 @@ function chargerMasque() {
 
     }, false);
     inputTmp.click();
-
-    // var filename = 'E:/Important/Etudes/ISIMA/ZZ3/Stage/Application/masqueTestNB.png';
 }
 
 function concatAnnotations(ptsAnnot) {
@@ -1557,7 +1444,6 @@ function concatAnnotations(ptsAnnot) {
                 ptsAnnot.splice(l, 1);
             } else if(voisinageDebFin(ptsAnnot[k], ptsAnnot[l])) {
                 ptsAnnot[k] = ptsAnnot[l].concat(ptsAnnot[k]);
-                // ptsAnnot[k] = ptsAnnot[k].reverse().concat(ptsAnnot[l].reverse());
                 ptsAnnot.splice(l, 1);
             } else if(voisinageDebFin(ptsAnnot[l], ptsAnnot[k])) {
                 ptsAnnot[k] = ptsAnnot[k].concat(ptsAnnot[l]);
@@ -1627,7 +1513,7 @@ function voisinageFinFin(annot1, annot2) {
 
 function getExtremitesLigne(data, i, j) {
     let k = j;
-    while(data[(i*largeurInference+(k+1))*4] != 0) {
+    while(data[(i*inferenceWidth+(k+1))*4] != 0) {
         k+=1;
     }
     return[[i,j], [i,k]];
@@ -1650,27 +1536,25 @@ function isBlack(data, i ,j, canvas) {
 }
 
 function masqueHandler(e2) {
-    $("body").append("<canvas id='canvasMasque' style='visibility: visible' width='" + largeurInference + "' height='" + hauteurInference + "'>")
+    $("body").append("<canvas id='canvasMasque' style='visibility: visible' width='" + inferenceWidth + "' height='" + inferenceHeight + "'>")
     var canvas = document.getElementById('canvasMasque');
-    rapportImageInferenceX = imageCourante.width / largeurInference;
-    rapportImageInferenceY = imageCourante.height / hauteurInference;
-    var img = new Image(largeurInference, hauteurInference);
+    xPictureInferenceRatio = currentPicture.width / inferenceWidth;
+    yPictureInferenceRatio = currentPicture.height / inferenceHeight;
+    var img = new Image(inferenceWidth, inferenceHeight);
     img.src = e2.target.result;
     canvas.height = img.height;
     canvas.width = img.width;
     ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, img.width, img.height);
     // 2.6 est un coefficient calculé pour obtenir une bonne valeur de
-    // distanceVisibleMin pour les images testées, le coefficient permet de garder
+    // minVisibleDistance pour les images testées, le coefficient permet de garder
     // cette valeur pour toutes les images
-    distanceVisibleMin = imageCourante.width / largeurInference * 2.6;
+    minVisibleDistance = currentPicture.width / inferenceWidth * 2.6;
     var data = ctx.getImageData(0,0,canvas.width, canvas.height).data;
     var ptsAnnotations = [];
     var k;
 
-    ecartPointsImportants = parseInt(document.getElementById('inputCoef').value);
-
-    // let startTime = performance.now();
+    gapImportantPoints = parseInt(document.getElementById('inputCoef').value);
     if(data.find(element => element == 255)) {
         for (var i = 0; i < canvas.height; ++i) {
             for (var j = 0; j < canvas.width; ++j) {
@@ -1750,7 +1634,7 @@ function masqueHandler(e2) {
 
         var bonsPoints;
         for (i = 0; i < ptsAnnotations.length; ++i) {
-            if(ptsAnnotations[i].length > ecartPointsImportants || distance(ptsAnnotations[i][0], ptsAnnotations[i][ptsAnnotations[i].length - 1]) > distanceVisibleMin){
+            if(ptsAnnotations[i].length > gapImportantPoints || distance(ptsAnnotations[i][0], ptsAnnotations[i][ptsAnnotations[i].length - 1]) > minVisibleDistance){
                 bonsPoints = pointsImportants(ptsAnnotations[i]);
                 if (distance(bonsPoints[0], bonsPoints[bonsPoints.length - 1]) < 5) {
                     modeCanvas = 3;
@@ -1760,13 +1644,13 @@ function masqueHandler(e2) {
                 }
 
                 for(let j = 0; j < bonsPoints.length; ++j) {
-                    bonsPoints[j][0] = bonsPoints[j][0] * rapportImageInferenceY;// + 1;
-                    bonsPoints[j][1] = bonsPoints[j][1] * rapportImageInferenceX;// + 1;
+                    bonsPoints[j][0] = bonsPoints[j][0] * yPictureInferenceRatio;// + 1;
+                    bonsPoints[j][1] = bonsPoints[j][1] * xPictureInferenceRatio;// + 1;
                 }
 
                 let x = bonsPoints[0][1];
                 let y = bonsPoints[0][0];
-                let poly = creerLigne([x,y]);
+                let poly = createLine([x,y]);
                 layer.add(poly);
                 nbPoints = 0;
                 let idCircle = poly.attrs['id'] + '-' + nbPoints;
@@ -1795,18 +1679,14 @@ function masqueHandler(e2) {
 
 function masquerMasque() {
 
-    if (masqueVisible) {
-        masqueVisible = false;
-        // document.getElementById('divCanvas').style.visibility = 'hidden';
-        // document.getElementById('imageCourante').style.visibility = 'visible';
+    if (isMaskVisible) {
+        isMaskVisible = false;
         layer.hide();
-        document.getElementById('btnMasquer').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
+        document.getElementById('btnMask').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
     } else {
-        masqueVisible = true;
-        // document.getElementById('divCanvas').style.visibility = 'visible';
-        // document.getElementById('imageCourante').style.visibility = 'hidden';
+        isMaskVisible = true;
         layer.show();
-        document.getElementById('btnMasquer').className = "btn btn-outline-dark btn-rounded btn-lg";
+        document.getElementById('btnMask').className = "btn btn-outline-dark btn-rounded btn-lg";
     }
 }
 
@@ -1822,22 +1702,20 @@ function pointsImportants(ligne) {
         }
     }
     last = ptsAnnot.length-1;
-    for(var i = ecartPointsImportants; i < last-ecartPointsImportants; i+=ecartPointsImportants) {
-        if (!(ptsAnnot[i][0] - ptsAnnot[i-ecartPointsImportants][0] == ptsAnnot[i+ecartPointsImportants][0] - ptsAnnot[i][0]
-            && ptsAnnot[i][1] - ptsAnnot[i-ecartPointsImportants][1] == ptsAnnot[i+ecartPointsImportants][1] - ptsAnnot[i][1])) {
+    for(var i = gapImportantPoints; i < last-gapImportantPoints; i+=gapImportantPoints) {
+        if (!(ptsAnnot[i][0] - ptsAnnot[i-gapImportantPoints][0] == ptsAnnot[i+gapImportantPoints][0] - ptsAnnot[i][0]
+            && ptsAnnot[i][1] - ptsAnnot[i-gapImportantPoints][1] == ptsAnnot[i+gapImportantPoints][1] - ptsAnnot[i][1])) {
                 //S'il y a un écart
-                // let rapportI = ptsAnnot[i][0] - ptsAnnot[i-ecartPointsImportants][0] / ptsAnnot[i+ecartPointsImportants][0] - ptsAnnot[i][0];
-                // let rapportJ = ptsAnnot[i][1] - ptsAnnot[i-ecartPointsImportants][1] / ptsAnnot[i+ecartPointsImportants][1] - ptsAnnot[i][1]);
-                let penteDeb = ptsAnnot[i][0] - ptsAnnot[i - ecartPointsImportants][0] / ptsAnnot[i][1] - ptsAnnot[i - ecartPointsImportants][1];
-                let penteFin = ptsAnnot[i + ecartPointsImportants][0] - ptsAnnot[i][0] / ptsAnnot[i + ecartPointsImportants][1] - ptsAnnot[i][1];
+                let penteDeb = ptsAnnot[i][0] - ptsAnnot[i - gapImportantPoints][0] / ptsAnnot[i][1] - ptsAnnot[i - gapImportantPoints][1];
+                let penteFin = ptsAnnot[i + gapImportantPoints][0] - ptsAnnot[i][0] / ptsAnnot[i + gapImportantPoints][1] - ptsAnnot[i][1];
                 if(penteDeb / penteFin < 1 - ecartPente){
-                    if(!pointsEgaux(points[points.length-1], ptsAnnot[i - Math.round(ecartPointsImportants/2)])) {
-                        points.push(ptsAnnot[i - Math.round(ecartPointsImportants/2)]);
+                    if(!pointsEgaux(points[points.length-1], ptsAnnot[i - Math.round(gapImportantPoints/2)])) {
+                        points.push(ptsAnnot[i - Math.round(gapImportantPoints/2)]);
                     }
                 }
                 points.push(ptsAnnot[i]);
                 if (penteDeb / penteFin > 1 + ecartPente) {
-                    points.push(ptsAnnot[i + Math.round(ecartPointsImportants/2)]);
+                    points.push(ptsAnnot[i + Math.round(gapImportantPoints/2)]);
                 }
             }
         }
@@ -1847,19 +1725,20 @@ function pointsImportants(ligne) {
 
 function pointsEgaux(pt1, pt2) {
     ret = false;
-    if(pt1[0] == pt2[0] && pt1[1] == pt2[1])
-    ret = true;
+    if(pt1[0] == pt2[0] && pt1[1] == pt2[1]) {
+        ret = true;
+    }
     return ret;
 }
 
 //Debug
-function afficherCercle(cercle) {
+function displayCircle(cercle) {
     console.log('id : ' + cercle.attrs['id']);
     console.log('zIndex : ' + cercle.zIndex());
     console.log('Position : x ' + cercle.x() + ' y ' + cercle.y());
 }
 
-function afficherLigne(line) {
+function displayLine(line) {
     console.log('id : ' + line.attrs['id']);
     console.log('zIndex : ' + line.zIndex());
     let message = "Points : "
@@ -1870,7 +1749,7 @@ function afficherLigne(line) {
 
 }
 
-function afficherVarConstr() {
+function displayConstructionVariables() {
     console.log("tmpDot : " + tmpDot);
     console.log("nbPoints : " + nbPoints);
     console.log("newLineBool : " + newLineBool);
@@ -1883,8 +1762,8 @@ function afficherVarConstr() {
 }
 
 //Création et modification d'annotation
-function annulerAnnotation() {
-    if(modeCanvas != 4) {
+function cancelAnnotation() {
+    if(modeCanvas == 1 || modeCanvas == 3) {
         var children = layer.getChildren();
         var last = children[children.length - 1];
         if(last.getClassName() === 'Arc') {
@@ -1902,8 +1781,7 @@ function annulerAnnotation() {
                 children.pop();
             } else {
                 nbPoints--;
-                decaleIDCercles(1, idCercle, idLine);
-
+                shiftCirclesID(1, idCercle, idLine);
             }
         } else if(last.getClassName() === 'Line'){ //dernier children est une ligne
             children.pop();
@@ -1915,7 +1793,7 @@ function annulerAnnotation() {
 function concatLines(line1, line2) {
     //makes line2 have line1's points and then its own
 
-    //The first solution takes time and is asynchronous,
+    //This first solution takes time and is asynchronous,
     //that causes some issues
     //line2.points(line1.points().concat(line2.points()));
     let points1 = line1.points();
@@ -1945,7 +1823,7 @@ function create1Dot(x, y, idCircle) {
     circle.attrs['y'] = y;
 
     circle.on('dragstart', function () {
-        if(clickType == 2) {
+        if(clickType == clickDrag) {
             this.stroke('green');
             oldPos[0] =  this.x();
             oldPos[1] =  this.y();
@@ -1954,44 +1832,32 @@ function create1Dot(x, y, idCircle) {
             this.stopDrag();
         }
     });
-
-    // circle.on('mouseup', function () {
-    //     console.log('mouseup arc');
-    // });
     circle.on('mousedown', function (e) {
         clickType = e.evt.button;
+        this.stroke('green');
+        layer.draw();
         this.startDrag();
     });
     circle.on('dragmove', function (e) {
-        // if(e.evt.button == 1) {
             createDot = false;
             newLineBool = false;
-            // poly = undefined;
-            // if(!tmpDot) {
-                nbPoints = 0;
-            // }
+            nbPoints = 0;
             let diffX = this.x() - oldPos[0];
             let diffY = this.y() - oldPos[1];
             let id = this.attrs['id'];
             let ligne = parseInt(id.split('-')[0]);
             let points = parseInt(id.split('-')[1]);
-            // let lines = layer.getChildren(function(node){
-            //     return node.getClassName() === 'Line';
-            // });
             let line = getLine(ligne);
             line.points()[2*points] += diffX;
             line.points()[2*points+1] += diffY;
             oldPos[0] = this.x();
             oldPos[1] = this.y();
-        // } else {
-        //     this.stopDrag();
-        // }
     });
 
     circle.on('dragend', function () {
         this.stroke('red');
         layer.draw();
-        if(tmpDot && clickType == 2) {
+        if(tmpDot && clickType == clickDrag) {
             this.startDrag();
         } else if(!(sontEnvironEgalesProportionnelles(oldPos[0], this.x())
                 && sontEnvironEgalesProportionnelles(oldPos[1], this.y()))) {
@@ -2006,26 +1872,14 @@ function create1Dot(x, y, idCircle) {
     circle.on('click', function (e) {
         clickType = e.evt.button;
         switch(clickType) {
-            case 0:
+            case clickAdd:
                 if( modeCanvas === 5) {
-                    this.destroy();
-                    let id = this.attrs['id'];
-                    let ligne = parseInt(id.split('-')[0]);
-                    let points = parseInt(id.split('-')[1]);
-                    let lines = layer.getChildren(function(node){
-                        return node.getClassName() === 'Line';
-                    });
-
-                    lines[ligne].points().splice(2*points, 2);
-                    decaleIDCercles(1, id, ligne);
-                    layer.draw();
-                    boutonsOff();
-                    modeCanvas = 0;
+                    deleteDot(this);
                 } else {
-                    afficherCercle(this);
+                    displayCircle(this);
                 }
                 break;
-            case 1:
+            case clickDelete:
                 if( modeCanvas === 4) {
                     deleteDot(this);
                 }
@@ -2053,36 +1907,28 @@ function createTempDot(idLine) {
     remakeDots(idLine);
     let dot = getDot((line.points().length / 2 - 1).toString(), idLine);
     currentCircle = dot;
-    clickType = 2; //trick not to stop the drag
+    clickType = clickDrag; //trick not to stop the drag
     tmpDot = true;
     dot.startDrag();
     ++nbPoints;
 }
 
-function creerLigne(ptsLigne) {
+function createLine(linePoints) {
     var poly = new Konva.Line({
-        points: ptsLigne,
+        points: linePoints,
         stroke: 'blue',
         strokeWidth: 3,
         id: nbElem,
     });
     ++nbElem;
 
-    // poly.on('mouseup', function () {
-    //     console.log('mouseup poly');
-    // });
     poly.on('dragstart', function () {
-        // let pos = stage.getPointerPosition();
         oldPos[0] =  this.x();
         oldPos[1] =  this.y();
-        // this.fire('dragend');
     });
     poly.on('dragend', function () {
-        let circles = layer.getChildren(function(node){
-            return node.getClassName() === 'Arc';
-        });
+        let circles = getAllDots();
         let idLigne = this.attrs['id'];
-        // let pos = stage.getPointerPosition();
         let diffX = this.x() - oldPos[0];
         let diffY = this.y() - oldPos[1];
         circles = circles.filter(circle => circle.attrs['id'].split('-')[0] == idLigne);
@@ -2100,10 +1946,11 @@ function creerLigne(ptsLigne) {
         circle = findCircle(clickPos);
         switch (clickType) {
             //Left click
-            case 0:
+            case clickAdd:
+                leftMouseDown = true;
                 switch (modeCanvas) {
                     case 0:
-                        afficherLigne(this);
+                        displayLine(this);
                         break;
                     case 1:
                         if(circle != undefined) {
@@ -2115,10 +1962,7 @@ function creerLigne(ptsLigne) {
                         break;
                     case 4:
                         if(layer.getChildren(function(node) {return node.isDragging() && node.getClassName() === 'Arc'}).length == 0) {
-                            if(circle != undefined) {
-
-                            } else {
-
+                            if(circle == undefined) {
                                 let idLigne = this.attrs['id'];
                                 let added = false;
                                 let i = 0;
@@ -2126,7 +1970,6 @@ function creerLigne(ptsLigne) {
                                 while(!added && i < pts.length - 3) {
                                     let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
                                     let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
-                                    // console.log(v1, v2);
                                     let angle = getAngle(v1, v2);
                                     if(sontEnvironEgalesProportionnelles(angle, 180)) {
                                         let circles = getDots(idLigne);
@@ -2145,8 +1988,8 @@ function creerLigne(ptsLigne) {
                                 }
                                 if(this.closed() && !added && i == pts.length - 2) {
                                     let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
-                                    let angle = getAngle(v1, v2);
                                     let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
+                                    let angle = getAngle(v1, v2);
                                     if(sontEnvironEgalesProportionnelles(angle, 180)) {
                                         let circles = getDots(idLigne);
                                         let zInd = circles[circles.length - 1].zIndex() + 1;
@@ -2154,9 +1997,6 @@ function creerLigne(ptsLigne) {
                                         this.points().push(clickPos.y);
                                         let idPoint = idLigne + '-' + circles.length;
                                         remakeDots(idLigne);
-                                        // var dot = create1Dot(clickPos.x, clickPos.y, idPoint);
-                                        // dot.zIndex(zInd);
-                                        // var dot = getDot(idLigne, idPoint.split('-')[1]);
                                         added = true;
                                         layer.draw();
                                     }
@@ -2164,12 +2004,11 @@ function creerLigne(ptsLigne) {
                                 let dot = findCircle(clickPos);
                                 if(dot != undefined) {
                                     mousedwn = true;
-                                    clickType = 2;
+                                    clickType = clickDrag;
                                     dot.stroke('green');
                                     layer.draw();
                                     dot.startDrag();
                                 }
-                                // }
                             }
                         }
                         break;
@@ -2179,7 +2018,7 @@ function creerLigne(ptsLigne) {
                 }
                 break;
             // Mouse wheel click
-            case 1 :
+            case clickDelete :
                 switch (modeCanvas) {
                     case 4:
                         if(circle != undefined) {
@@ -2192,12 +2031,14 @@ function creerLigne(ptsLigne) {
                 }
                 break;
             //Right click
-            case 2:
+            case clickDrag:
                 switch (modeCanvas) {
                     case 4:
-                    if(layer.getChildren(function(node) {return node.isDragging() && node.getClassName() === 'Arc'}).length == 0) {
+                    if(!leftMouseDown && layer.getChildren(function(node) {return node.isDragging() && node.getClassName() === 'Arc'}).length == 0) {
                         if(circle != undefined) {
                             stage.stopDrag();
+                            circle.stroke('green');
+                            layer.draw();
                             circle.startDrag();
                         } else {
                             stage.draggable(false);
@@ -2208,7 +2049,6 @@ function creerLigne(ptsLigne) {
                             while(!added && i < pts.length - 3) {
                                 let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
                                 let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
-                                // console.log(v1, v2);
                                 let angle = getAngle(v1, v2);
                                 if(sontEnvironEgalesProportionnelles(angle, 180)) {
                                     let circles = getDots(idLigne);
@@ -2219,12 +2059,7 @@ function creerLigne(ptsLigne) {
                                     newPoints = newPoints.concat(this.points().slice(i + 2));
                                     this.points(newPoints);
                                     let idPoint = idLigne + '-' + (i + 2) / 2;
-                                    // console.log('Décalage :');
                                     remakeDots(idLigne);
-                                    // decaleIDCercles(1, (i + 2) / 2, idLigne);
-                                    // var dot = create1Dot(clickPos.x, clickPos.y, idPoint);
-                                    // dot.zIndex(zInd);
-                                    // var dot = getDot(idLigne, idPoint.split('-')[1]);
                                     added = true;
                                     layer.draw();
                                 }
@@ -2232,8 +2067,8 @@ function creerLigne(ptsLigne) {
                             }
                             if(this.closed() && !added && i == pts.length - 2) {
                                 let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
-                                let angle = getAngle(v1, v2);
                                 let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
+                                let angle = getAngle(v1, v2);
                                 if(sontEnvironEgalesProportionnelles(angle, 180)) {
                                     let circles = getDots(idLigne);
                                     let zInd = circles[circles.length - 1].zIndex() + 1;
@@ -2241,9 +2076,6 @@ function creerLigne(ptsLigne) {
                                     this.points().push(clickPos.y);
                                     let idPoint = idLigne + '-' + circles.length;
                                     remakeDots(idLigne);
-                                    // var dot = create1Dot(clickPos.x, clickPos.y, idPoint);
-                                    // dot.zIndex(zInd);
-                                    // var dot = getDot(idLigne, idPoint.split('-')[1]);
                                     added = true;
                                     layer.draw();
                                 }
@@ -2251,7 +2083,9 @@ function creerLigne(ptsLigne) {
                             let dot = findCircle(clickPos);
                             if(dot != undefined) {
                                 mousedwn = true;
-                                clickType = 2;
+                                clickType = clickDrag;
+                                dot.stroke('green');
+                                layer.draw();
                                 dot.startDrag();
                             }
                         }
@@ -2274,20 +2108,17 @@ function creerLigne(ptsLigne) {
                 layer.draw();
                 boutonsOff();
                 modeCanvas = 0;
-                majIdAnnotations(idLigne);
+                updateAnnotationsID(idLigne);
                 --nbElem;
                 break;
             default:
-                // console.log(this.zIndex());
-
         }
 
     });
 
     poly.on('mouseup', function() {
-        if(clickType == 2) {
-            stopAllDrag();
-        }
+        stopAllDrag();
+        leftMouseDown = false;
     });
 
     if(modeCanvas == 3) {
@@ -2298,38 +2129,34 @@ function creerLigne(ptsLigne) {
     return poly;
 }
 
-function decaleIDCercles(sens, indice, idLigne) {
+function shiftCirclesID(sens, indice, idLigne) {
     /*
         sens = 1 => on ajoute un à chaque partie cercle des id
         sens = -1 => on retire un à chaque partie cercle des id
     */
-    let circles = layer.getChildren(function(node){
-        return node.getClassName() === 'Arc' && node.attrs['id'].split('-')[0] == idLigne;
-    });
+    let circles = getDots(idLigne);
     if(sens == -1) {
         for(let i = indice; i < circles.length; ++i) {
-            afficherCercle(circles[i]);
+            displayCircle(circles[i]);
             let id = circles[i].attrs['id'].split('-');
             let modif = parseInt(id[1]) - 1;
-            // if(i % 2 == 0)
-                circles[i].zIndex(circles[i].zIndex() - 1);
+            circles[i].zIndex(circles[i].zIndex() - 1);
             circles[i].attrs['id'] = id[0] + '-' + (modif.toString());
-            afficherCercle(circles[i]);
+            displayCircle(circles[i]);
         }
     } else {
         for(let i = indice; i < circles.length; ++i) {
-            afficherCercle(circles[i]);
+            displayCircle(circles[i]);
             let id = circles[i].attrs['id'].split('-');
             let modif = parseInt(id[1]) + 1;
-            // if(i % 2 == 1)
-                circles[i].zIndex(circles[i].zIndex() + 1);
+            circles[i].zIndex(circles[i].zIndex() + 1);
             circles[i].attrs['id'] = id[0] + '-' + (modif.toString());
-            afficherCercle(circles[i]);
+            displayCircle(circles[i]);
         }
     }
 }
 
-function decaleIDCerclesNTimes(sens, indice, idLigne, n) {
+function shiftCirclesIdNTimes(sens, indice, idLigne, n) {
     //works only to move existing dots to the end
     let dots = getDots(idLigne);
     if(sens > 0) {
@@ -2355,9 +2182,6 @@ function deleteDot(dot) {
     let id = dot.attrs['id'];
     let lineID = parseInt(id.split('-')[0]);
     let pointID = parseInt(id.split('-')[1]);
-    // let lines = layer.getChildren(function(node){
-    //     return node.getClassName() === 'Line';
-    // });
     let line = getLine(lineID);
     line.points().splice(2*pointID, 2);
     if(line.closed() && line.points().length == 4) {
@@ -2385,10 +2209,8 @@ function findCircle(clickPos) {
     let res = undefined;
     for(let i = 0; !founded && i < allCircles.length; ++i) {
         if(distance([clickPos.x, clickPos.y], [allCircles[i].x(), allCircles[i].y()]) < allCircles[i].outerRadius()) {
-            // if(allCircles[i].attrs['id'] != currentCircle.attrs['id']) {
-                res = allCircles[i];
-                founded = true;
-            // }
+            res = allCircles[i];
+            founded = true;
         }
     }
     return res;
@@ -2400,10 +2222,7 @@ function findSeveralCircles(clickPos) {
     let res = [];
     for(let i = 0; !founded && i < allCircles.length; ++i) {
         if(distance([clickPos.x, clickPos.y], [allCircles[i].x(), allCircles[i].y()]) < allCircles[i].outerRadius()) {
-            // if(allCircles[i].attrs['id'] != currentCircle.attrs['id']) {
-                res.push(allCircles[i]);
-                // founded = true;
-            // }
+            res.push(allCircles[i]);
         }
     }
     return res;
@@ -2441,7 +2260,6 @@ function getAllDots() {
         return node.getClassName() === 'Arc';
     });
     return circles;
-
 }
 
 function getAllEllipses() {
@@ -2452,7 +2270,6 @@ function getAllEllipses() {
         return node.getClassName() === 'Ellipse';
     });
     return ellipses;
-
 }
 
 function getAllLines() {
@@ -2463,14 +2280,12 @@ function getAllLines() {
         return node.getClassName() === 'Line';
     });
     return lines;
-
 }
 
 function getCLickPos() {
     let clickPos = stage.getPointerPosition();
-    clickPos.x = (clickPos.x  - stage.x()) / niveauZoom;
-    clickPos.y = (clickPos.y  - stage.y()) / niveauZoom;
-
+    clickPos.x = (clickPos.x  - stage.x()) / zoomLevel;
+    clickPos.y = (clickPos.y  - stage.y()) / zoomLevel;
     return clickPos;
 }
 
@@ -2533,11 +2348,9 @@ function lineFusion(dot) {
             deleteDots(idTmp);
             deleteDots(changingID);
             if(poly.attrs['id'] > lineTmp.attrs['id']) {
-                // deleteDots(poly.attrs['id']);
                 changingID = lineTmp.attrs['id'];
             }
             poly.attrs['id'] = changingID;
-            // console.log("id ligne : " + changingID);
             lineTmp.destroy();
             remakeDots(poly.attrs['id']);
             layer.draw();
@@ -2569,15 +2382,11 @@ function lineFusion(dot) {
     }
 }
 
-function majIdAnnotations(id) {
-    let lignes = layer.getChildren(function(node){
-        return node.getClassName() === 'Line';
-    });
+function updateAnnotationsID(id) {
+    let lignes = getAllLines();
     for(let i = id; i < lignes.length; ++i) {
         let idTmp = lignes[i].attrs['id'];
-        let cercles = layer.getChildren(function(node){
-            return node.getClassName() === 'Arc' && node.attrs['id'].split('-')[0] == idTmp;
-        });
+        let cercles = getDots(idTmp);
         for(let i = 0; i < cercles.length; ++i) {
             let idCercleTmp = cercles[i].attrs['id'].split('-');
             let idCercle = cercles[i].attrs['id']
@@ -2639,7 +2448,6 @@ function serializeEllipse(elli) {
     let rotation = "\t\t\t\"rotation\" : " + elli.rotation().toString() + "\n";
     let fin = "\t\t}";
     let ret = deb + center + radX + radY + rotation + fin;
-    // console.log(ret);
     return ret;
 }
 
@@ -2650,7 +2458,6 @@ function serializeEllipses(ellipses) {
     }
     str += serializeEllipse(ellipses[ellipses.length - 1]) + '\n';
     str += "\t]\n}"
-    // console.log(str);
     return str;
 }
 
@@ -2676,7 +2483,6 @@ function serializeLines(lines) {
     }
     str += serializeLine(lines[lines.length-1]) + '\n';
     str += "\t]\n}"
-    // console.log(str);
     return str;
 }
 
@@ -2689,16 +2495,16 @@ function serializeLines(lines) {
     //     // generate model input
     //     let canvas = document.getElementById('canvasRedimmension');
     //     let ctx = canvas.getContext();
-    //     imageCourante.getContext();
+    //     currentPicture.getContext();
     //     // canvas.src = document.getElementById('imageCourante').src;
-    //     ctx.drawImage(imageCourante, 0, 0, largeurInference, hauteurInference);
+    //     ctx.drawImage(currentPicture, 0, 0, inferenceWidth, inferenceHeight);
     //
     //     /*
     //      ajout de deux lignes noires à la fin de l'image pour le fonctionnement
     //      du réseau utilisé
     //     */
     //     let imgdata = ctx.getImageData();
-    //     for(let i = 0; i < 2 * 4 * largeurInference; ++i) {
+    //     for(let i = 0; i < 2 * 4 * inferenceWidth; ++i) {
     //         imgdata.push(0);
     //     }
     //     /*conversion en float32 pour le fonctionnement du réseau*/
@@ -2732,9 +2538,9 @@ function serializeLines(lines) {
 //
 //   let canvas = document.getElementById('canvasRedimmension');
 //   let ctx = canvas.getContext();
-//   imageCourante.getContext();
+//   currentPicture.getContext();
 //   // canvas.src = document.getElementById('imageCourante').src;
-//   ctx.drawImage(imageCourante, 0, 0, largeurInference, hauteurInference);
+//   ctx.drawImage(currentPicture, 0, 0, inferenceWidth, inferenceHeight);
 //
 //   const imageLoader = new ImageLoader(480, 270);
 //   let imgDtTmp = await imageLoader.getImageData(ctx.toDataURL()); //Fonctionne avec une dataURL
