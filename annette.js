@@ -23,7 +23,7 @@ var ellipseFinished = false;
 var ellipseTmp = undefined;
 var firstPointAdded = false;
 var inferenceHeight = 270;
-var idEllipse;
+var ellipseID;
 var currentPicture;
 var currentPictureIndex;
 var picturesIndex;
@@ -50,7 +50,7 @@ var zoomLevel = 1;
 var oldPos = [];
 var oldPosStage = [];
 var pictureScroll = 0;
-var pointsEllipse;
+var ellipsePoints;
 var pointCreated;
 var poly;
 var linePoints;
@@ -67,7 +67,7 @@ var tmpDot = false;
 var video;
 
 
-var modeCanvas = 0;
+var canvasMode = 0;
 /*
 * 0 : mode libre
 * 1 : ajout ligne
@@ -89,11 +89,11 @@ function init() {
 
     document.getElementById('btnDefileHaut').addEventListener('click',defileHaut);
     document.getElementById('btnDefileBas').addEventListener('click',defileBas);
-    document.getElementById('btnSupprImage').addEventListener('click',supprImages);
+    document.getElementById('btnSupprImage').addEventListener('click',deletePictures);
     document.getElementById('btnChargeVideo').addEventListener('click', extractFromVideo);
     document.getElementById('btnCorrection').addEventListener('click', function () {
-        if(modeCanvas === 4){
-            modeCanvas = 0;
+        if(canvasMode === 4){
+            canvasMode = 0;
             document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg";
             if(zoomLevel != 1)
                 stage.draggable(true);
@@ -110,8 +110,8 @@ function init() {
             layer.draw();
 
         } else {
-            boutonsOff();
-            modeCanvas = 4;
+            buttonsOff();
+            canvasMode = 4;
             document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
             let circles = getAllDots();
             for(var i = 0; i < circles.length; ++i) {
@@ -122,48 +122,47 @@ function init() {
     });
 
     document.getElementById('btnAjoutLigne').addEventListener('click',function(){
-        if(modeCanvas === 1){
-            modeCanvas = 0;
+        if(canvasMode === 1){
+            canvasMode = 0;
             document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg";
-        }else{
-            modeCanvas = 1;
-            boutonsOff();
+        } else {
+            canvasMode = 1;
+            buttonsOff();
             document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
         }
     }, false);
 
     document.getElementById('btnAjoutEllipse').addEventListener('click',function(){
-        if(modeCanvas === 2){
-            modeCanvas = 0;
+        if(canvasMode === 2){
+            canvasMode = 0;
             document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
-        }else{
-            modeCanvas = 2;
-            boutonsOff();
+        } else {
+            canvasMode = 2;
+            buttonsOff();
             document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
-            pointsEllipse = [];
+            ellipsePoints = [];
         }
     }, false);
 
     document.getElementById('btnAjoutZoneFermee').addEventListener('click',function(){
-        if(modeCanvas === 3){
-            modeCanvas = 0;
+        if(canvasMode === 3){
+            canvasMode = 0;
             document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg";
-        }else{
-            modeCanvas = 3;
-            boutonsOff();
+        } else {
+            canvasMode = 3;
+            buttonsOff();
             document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
         }
     }, false);
 
-
     document.getElementById('btnSupprAnnotation').addEventListener(('click'), function () {
-        if(modeCanvas === 5)  {
-            modeCanvas = 0;
+        if(canvasMode === 5)  {
+            canvasMode = 0;
             document.getElementById('btnSupprAnnotation').className = "btn btn-outline-dark btn-rounded btn-lg";
         }
         else {
-            boutonsOff();
-            modeCanvas = 5;
+            buttonsOff();
+            canvasMode = 5;
             document.getElementById('btnSupprAnnotation').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
         }
     });
@@ -171,90 +170,90 @@ function init() {
     document.getElementById('btnValider').addEventListener(('click'), function () {
         maskArcs();
         var y = document.getElementById("DLCanvas");
-        let nomImage = pictureList[currentPictureIndex - 1].name.split('.')[0];
+        let pictureName = pictureList[currentPictureIndex - 1].name.split('.')[0];
         killTransformers();
         ratioY = currentPicture.naturalHeight / currentPicture.height;
         ratioX = currentPicture.naturalWidth / currentPicture.width;
         xPictureInferenceRatio = currentPicture.width / inferenceWidth;
         yPictureInferenceRatio = currentPicture.height / inferenceHeight;
 
-        let cptInput = 0;
-        let nomFicText;
-        let nomFicMasque;
-        let nomFicImage;
-        let texte;
+        let inputCounter = 0;
+        let textFileName;
+        let maskFileName;
+        let pictureFileName;
+        let text;
         let maskData;
         let annotatedImageData;
 
-        let inputTextuel = document.getElementById('CBJSON');
-        if(inputTextuel.checked) {
-            ++cptInput;
+        let textualInput = document.getElementById('CBJSON');
+        if(textualInput.checked) {
+            ++inputCounter;
             let lines = getAllLines();
             if(lines.length != 0) {
-                texte = serializeLines(lines);
+                text = serializeLines(lines);
 
             }
             let ellipses = getAllEllipses();
             if(ellipses.length != 0) {
                 if(lines.length != 0) {
-                    texte += ",\n";
+                    text += ",\n";
                 }
-                texte += serializeEllipses(ellipses);
+                text += serializeEllipses(ellipses);
             }
-            nomFicText = "annotationTexte-" + nomImage + ".JSON"
+            textFileName = "annotationtext-" + pictureName + ".JSON"
         }
         layer.draw();
 
         let inputImage = document.getElementById('CBimage');
         if(inputImage.checked) {
-            ++cptInput;
+            ++inputCounter;
             y.href = stage.toDataURL();
             annotatedImageData = y.href;
-            nomFicImage = 'imageAnnotee-' + nomImage + '.png';
-            y.download = nomFicImage;
+            pictureFileName = 'imageAnnotee-' + pictureName + '.png';
+            y.download = pictureFileName;
             y.addEventListener('change', downloadimage, false);
         }
         let inputMasque = document.getElementById('CBmasque');
         if(inputMasque.checked) {
-            ++cptInput;
+            ++inputCounter;
             prepareMask();
 
             y.href = stage.toDataURL();
-            nomFicMasque = 'masque-' + nomImage + '.png';
-            y.download = nomFicMasque;
+            maskFileName = 'masque-' + pictureName + '.png';
+            y.download = maskFileName;
             y.addEventListener('change', downloadimage, false);
             maskData = y.href;
             setMaskToNormal();
         }
-        if(cptInput > 1) {
+        if(inputCounter > 1) {
             var zip = new JSZip();
             if(inputImage.checked) {
                 let imgData = annotatedImageData;
-                imgData = imgData.substr(22); //retire le texte au début de l'URL
+                imgData = imgData.substr(22); //retire le text au début de l'URL
                 imgData = atob(imgData); //conversion en binaire
 
-                zip.file(nomFicImage, imgData, {binary: true});
+                zip.file(pictureFileName, imgData, {binary: true});
             }
-            if(inputTextuel.checked) {
-                zip.file(nomFicText, texte);
+            if(textualInput.checked) {
+                zip.file(textFileName, text);
             }
             if(inputMasque.checked) {
                 maskData = y.href;
-                maskData = maskData.substr(22); //retire le texte au début de l'URL
+                maskData = maskData.substr(22); //retire le text au début de l'URL
                 maskData = atob(maskData); //conversion en binaire
-                zip.file(nomFicMasque, maskData, {binary: true});
+                zip.file(maskFileName, maskData, {binary: true});
             }
 
             zip.generateAsync({type:"blob"})
             .then(function(content) {
-                saveAs(content, nomImage + ".zip");
+                saveAs(content, pictureName + ".zip");
             });
         } else {
             if(inputImage.checked) {
                 y.click();
-            } else if(inputTextuel.checked) {
-                let blob = new Blob([texte], { type: "text/plain;charset=utf-8" });
-                saveAs(blob, nomFicText);
+            } else if(textualInput.checked) {
+                let blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+                saveAs(blob, textFileName);
             } else if(inputMasque.checked) {
                 y.click();
             }
@@ -270,10 +269,9 @@ function init() {
             var layerBkg = stage.getLayers()[0];
             layerBkg.scale({x: zoomLevel, y: zoomLevel});
             layer.scale({x: zoomLevel, y: zoomLevel});
-            if(modeCanvas != 4)
+            if(canvasMode != 4) {
                 stage.draggable(true);
-
-
+            }
             layerBkg.draw();
             layer.draw();
         }
@@ -296,7 +294,7 @@ function init() {
         }
     });
 
-    btnMask.addEventListener('click', masquerMasque);
+    btnMask.addEventListener('click', hideMask);
     btnLoad.addEventListener('click', load1Picture);
 
     initCanvas();
@@ -372,7 +370,7 @@ function init() {
                     case clickAdd:
                         break;
                     case clickDelete:
-                        switch(modeCanvas) {
+                        switch(canvasMode) {
                             case 1:
                             case 3:
                                 nbPoints = 0;
@@ -387,7 +385,7 @@ function init() {
                                     } else {
                                         if(e.target.closed()) {
                                             let line = e.target;
-                                            let idLigne = line.attrs['id'];
+                                            let lineID = line.attrs['id'];
                                             let clickPos = getCLickPos();
                                             let deleted = false;
                                             let i = 0;
@@ -396,12 +394,12 @@ function init() {
                                                 let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
                                                 let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
                                                 let angle = getAngle(v1, v2);
-                                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
-                                                    let newPointsDeb = pts.slice(i + 2);
-                                                    line.points(newPointsDeb.concat(line.points().slice(0, i + 2)));
+                                                if(areProportionnalyEqualish(angle, 180)) {
+                                                    let newPointsBeg = pts.slice(i + 2);
+                                                    line.points(newPointsBeg.concat(line.points().slice(0, i + 2)));
                                                     line.closed(false);
-                                                    deleteDots(idLigne);
-                                                    remakeDots(idLigne);
+                                                    deleteDots(lineID);
+                                                    remakeDots(lineID);
                                                     deleted = true;
                                                 } else {
                                                     i += 2;
@@ -412,7 +410,7 @@ function init() {
                                                 let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
                                                 let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
                                                 let angle = getAngle(v1, v2);
-                                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                                if(areProportionnalyEqualish(angle, 180)) {
                                                     line.closed(false);
                                                     layer.draw();
                                                 }
@@ -430,7 +428,7 @@ function init() {
                                                 let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
                                                 let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
                                                 let angle = getAngle(v1, v2);
-                                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                                if(areProportionnalyEqualish(angle, 180)) {
                                                     if(i + 3 == pts.length - 1) {
                                                         e.target.points().pop();
                                                         e.target.points().pop();
@@ -438,13 +436,13 @@ function init() {
                                                         e.target.points().shift();
                                                         e.target.points().shift();
                                                     } else {
-                                                        let pointsLigne1 = pts.slice(0, i+2);
-                                                        let pointsLigne2 = pts.slice(i+2);
-                                                        e.target.points(pointsLigne1);
+                                                        let line1Points = pts.slice(0, i+2);
+                                                        let line2Points = pts.slice(i+2);
+                                                        e.target.points(line1Points);
 
-                                                        if(pointsLigne2.length > 2) {
-                                                            let poly = createLine([pointsLigne2[0],pointsLigne2[1]]);
-                                                            poly.points(pointsLigne2);
+                                                        if(line2Points.length > 2) {
+                                                            let poly = createLine([line2Points[0],line2Points[1]]);
+                                                            poly.points(line2Points);
                                                             layer.add(poly);
                                                             remakeDots(poly.attrs['id']);
                                                         }
@@ -488,7 +486,7 @@ function init() {
                         }
                         break;
                     case clickDrag :
-                        if(!leftMouseDown && modeCanvas == 4) {
+                        if(!leftMouseDown && canvasMode == 4) {
                             if(e.target.getClassName() !== 'Arc') {
                                 let clickPos = getCLickPos();
                                 let circle = findCircle(clickPos);
@@ -614,19 +612,19 @@ function init() {
             document.getElementById('nomImageCourante').innerHTML = pictureList[currentPictureIndex - 1].name;
             nbElem = 0;
 
-            chargerMasque();
+            loadMask();
         });
         document.getElementById("imageL"+i).addEventListener('click',
             function (e) {
-                var indiceFic = parseInt(e.target.id.charAt(e.target.id.length-1));
-                if(indiceFic <= pictureList.length) {
-                    indiceFic += listBeginning - 1;
+                var fileIndex = parseInt(e.target.id.charAt(e.target.id.length-1));
+                if(fileIndex <= pictureList.length) {
+                    fileIndex += listBeginning - 1;
                     if (!e.target.className.includes("thumbnail")) {
                         e.target.className = "img-fluid img-thumbnail";
-                        selected.push(pictureList[indiceFic]);
+                        selected.push(pictureList[fileIndex]);
                     } else {
                         e.target.className = "img-fluid border";
-                        selected.splice(selected.indexOf(pictureList[indiceFic]), 1);
+                        selected.splice(selected.indexOf(pictureList[fileIndex]), 1);
                     }
                 }
             });
@@ -638,19 +636,19 @@ function init() {
                     pictureScroll = 0;
                     if(listBeginning < pictureList.length - 4) {
                         ++listBeginning;
-                        afficheListeImages();
+                        displayPictureList();
                     }
                 } else if(pictureScroll < 0) {
                     pictureScroll = 1;
                     if(listBeginning > 0) {
                         --listBeginning;
-                        afficheListeImages();
+                        displayPictureList();
                     }
                 }
             };
     }
     nbElem = 0;
-    initRaccourcis();
+    initShortkeys();
 }
 
 function initCanvas() {
@@ -659,11 +657,11 @@ function initCanvas() {
     divCanvas.addEventListener('click',function(e) {
         let clickPos = getCLickPos();
         if(clickType == clickAdd) {
-            if(ellipseTmp != undefined && pointsEllipse.length === 3) {
+            if(ellipseTmp != undefined && ellipsePoints.length === 3) {
                 ellipseTmp = undefined;
                 ellipseFinished = true;
             }
-            switch(modeCanvas) {
+            switch(canvasMode) {
                 case 3:
                 case 1:
                     if(nbPoints === 0) {
@@ -677,7 +675,7 @@ function initCanvas() {
                         newLineBool = true;
                     } else {
                         if(createDot) {
-                            poly.points(poly.points().concat([x, y]));
+                            poly.points().concat([x, y]);
                         }
                     }
                     nbPoints++;
@@ -694,24 +692,24 @@ function initCanvas() {
                     }
                     break;
                 case 2:
-                    while(pointsEllipse.length > 1
-                        && pointsEllipse[0][0] == pointsEllipse[1][0]
-                        && pointsEllipse[0][1] == pointsEllipse[1][1]) {
-                            pointsEllipse.splice(1,1);
+                    while(ellipsePoints.length > 1
+                        && ellipsePoints[0][0] == ellipsePoints[1][0]
+                        && ellipsePoints[0][1] == ellipsePoints[1][1]) {
+                            ellipsePoints.splice(1,1);
                         }
-                    pointsEllipse.push([clickPos.x,clickPos.y]);
+                    ellipsePoints.push([clickPos.x,clickPos.y]);
                     ellipseFinished = false;
 
-                    if(pointsEllipse.length === 1) {
+                    if(ellipsePoints.length === 1) {
                         // Abscisse, ordonnée, rayon abscisse, rayon ordonnée, rotation, début, fin
-                        var centreX = pointsEllipse[0][0];
-                        var centreY = pointsEllipse[0][1];
-                        var rayX = 2;//distance(pointsEllipse[0], pointsEllipse[1]);
+                        var xCenter = ellipsePoints[0][0];
+                        var yCenter = ellipsePoints[0][1];
+                        var rayX = 2;//distance(ellipsePoints[0], ellipsePoints[1]);
                         var rayY = rayX;
 
                         var elli = new Konva.Ellipse({
-                            x:centreX,
-                            y:centreY,
+                            x:xCenter,
+                            y:yCenter,
                             radiusX:rayX,
                             radiusY:rayY,
                             stroke: 'blue',
@@ -722,35 +720,35 @@ function initCanvas() {
 
                         stage.on('mousemove', function() {
                             if(ellipseTmp != undefined) {
-                                if(pointsEllipse.length == 1) {
+                                if(ellipsePoints.length == 1) {
                                     let clickPos = getCLickPos();
-                                    ellipseTmp.radiusY(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
-                                    ellipseTmp.radiusX(distance(pointsEllipse[0], [clickPos.x, clickPos.y]));
+                                    ellipseTmp.radiusY(distance(ellipsePoints[0], [clickPos.x, clickPos.y]));
+                                    ellipseTmp.radiusX(distance(ellipsePoints[0], [clickPos.x, clickPos.y]));
                                     layer.draw();
 
-                                } else if(pointsEllipse.length == 2) {
+                                } else if(ellipsePoints.length == 2) {
                                     let clickPos = getCLickPos();
-                                    ellipseTmp.radiusY(clickPos.y - pointsEllipse[0][1]);
+                                    ellipseTmp.radiusY(clickPos.y - ellipsePoints[0][1]);
                                     layer.draw();
-                                    modeCanvas = 0;
                                     document.getElementById('btnAjoutEllipse').className =
                                     "btn btn-outline-dark btn-rounded btn-lg";
-                                } else if(pointsEllipse.length == 3) {
+                                } else if(ellipsePoints.length == 3) {
                                     let clickPos = getCLickPos();
-                                    //vertical vector
-                                    let v1 = [0, 90];
+                                    //horizontal vector
+                                    let v1 = [90, 0];
                                     //vector between the center of the ellipse and the pointer
-                                    let v2 = [clickPos.x - ellipseTmp.x, clickPos.y - ellipseTmp.y];
+                                    let v2 = [clickPos.x - ellipseTmp.x(), clickPos.y - ellipseTmp.y()];
                                     let angle = getAngle(v1, v2);
                                     ellipseTmp.rotation(angle);
                                     layer.draw();
+                                    canvasMode = 0;
                                 }
 
                             }
                         });
 
                         elli.on('dblclick', function () {
-                            if(modeCanvas === 4) {
+                            if(canvasMode === 4) {
                                 if(ellipseClicked) {
                                     ellipseClicked = 0;
                                     var trns = layer.getChildren(function (node) {
@@ -762,7 +760,7 @@ function initCanvas() {
                                 } else {
                                     ellipseClicked = 1;
                                     this.draggable(true);
-                                    idEllipse = this.attrs['id'];
+                                    ellipseID = this.attrs['id'];
 
                                     var tr = new Konva.Transformer({
                                         boundBoxFunc: function (oldBoundBox, newBoundBox) {
@@ -786,11 +784,11 @@ function initCanvas() {
                             }
                         });
                         elli.on('click', function () {
-                            if( modeCanvas === 5) {
+                            if( canvasMode === 5) {
                                 this.destroy();
                                 layer.draw();
-                                boutonsOff();
-                                modeCanvas = 0;
+                                buttonsOff();
+                                canvasMode = 0;
                             }
                         });
                         elli.on('transform', function (e) {
@@ -907,7 +905,7 @@ function initCanvas() {
 
 }
 
-function initRaccourcis() {
+function initShortkeys() {
     /* Raccourcis existants
     * c : mode correction
     * s : mode suppression
@@ -989,7 +987,7 @@ function initRaccourcis() {
     });
 }
 
-function boutonsOff() {
+function buttonsOff() {
     document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -997,11 +995,11 @@ function boutonsOff() {
     document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnSupprAnnotation').className = "btn btn-outline-dark btn-rounded btn-lg";
 
-    if( (modeCanvas === 0 || modeCanvas === 4) && zoomLevel != 1) {
+    if( (canvasMode === 0 || canvasMode === 4) && zoomLevel != 1) {
         stage.draggable(true);
     }
 
-    if(modeCanvas === 4) {
+    if(canvasMode === 4) {
         for(var i = 0; i < layer.getChildren().length; ++i) {
             layer.getChildren()[i].draggable(false);
         }
@@ -1091,7 +1089,7 @@ function setMaskToNormal() {
 }
 
 //Gestion des images
-function afficheListeImages() {
+function displayPictureList() {
     picturesIndex = 1;
     listIndex = listBeginning;
     intervalIDLoadImage = setInterval(asyncLoadImage, 100);
@@ -1216,7 +1214,7 @@ function loadimage(e1) {
     for(var i = 0; i < e1.target.files.length; ++i) {
         pictureList.push(e1.target.files[i]);
     }
-    afficheListeImages();
+    displayPictureList();
     document.getElementById("explorerChargement").remove();
 }
 
@@ -1242,12 +1240,12 @@ function realiasing(data) {
     return data;
 }
 
-function supprImages() {
+function deletePictures() {
 
     while(selected.length != 0){
         pictureList.splice(pictureList.indexOf(selected.shift()),1);
     }
-    afficheListeImages();
+    displayPictureList();
     for(var i=1;i<5;++i) {
         var id = "imageL"+i;
         document.getElementById(id).className = "img-fluid";
@@ -1262,7 +1260,7 @@ function distance(pt1, pt2) {
     return Math.sqrt(x * x + y * y);
 }
 
-function enleverDoublons(tab) {
+function removeDoubles(tab) {
     for(let i = 0; i < tab.length; ++i) {
         let temp = tab[i];
         for(let j = i + 1; j < tab.length; ++j) {
@@ -1309,14 +1307,14 @@ function getAngle(v1, v2) {
     return angle;
 }
 
-function insererEnPos(tab, elem, pos) {
+function insertAt(tab, elem, pos) {
     var deb = tab.slice(0,pos);
     var fin = tab.slice(pos, tab.length);
     deb.push(elem);
     return deb.concat(fin);
 }
 
-function sontEnvironEgales(val1, val2, erreur) {
+function areEqualish(val1, val2, erreur) {
     let ret = false;
     if(val1 <= val2 + erreur && val1 >= val2 - erreur) {
         ret = true;
@@ -1324,7 +1322,7 @@ function sontEnvironEgales(val1, val2, erreur) {
     return ret;
 }
 
-function sontEnvironEgalesProportionnelles(val1, val2) {
+function areProportionnalyEqualish(val1, val2) {
     let ret = false;
     let erreur = 4 * val1 / 100; //4% de la valeur à comparer
     if(val1 <= val2 + erreur && val1 >= val2 - erreur) {
@@ -1333,9 +1331,9 @@ function sontEnvironEgalesProportionnelles(val1, val2) {
     return ret;
 }
 
-function sontVoisins(p1, p2, angle) {
+function areNeighbors(p1, p2, angle) {
     var ret  = false;
-    if(sontEnvironEgales(p1[0], p2[0], 1) && sontEnvironEgales(p1[1], p2[1], 1)) {
+    if(areEqualish(p1[0], p2[0], 1) && areEqualish(p1[1], p2[1], 1)) {
         ret = true;
     }
     return ret;
@@ -1395,7 +1393,7 @@ function loadVideo(e1) {
         setTimeout(function () {timerCallback();}, 0);
     });
     video.onended = function () {
-        afficheListeImages();
+        displayPictureList();
     };
     var fr = new FileReader();
     fr.onload = videoHandler;
@@ -1420,7 +1418,7 @@ function videoHandler(e2) {
 }
 
 //Gestion des masques d'inférence
-function chargerMasque() {
+function loadMask() {
 
     $("body").append("<input type='file' id='explorerMasque' accept='image/*' multiple>");
     var inputTmp = document.getElementById('explorerMasque');
@@ -1439,16 +1437,16 @@ function concatAnnotations(ptsAnnot) {
     while(k < ptsAnnot.length) {
         var l = k+1;
         while ( l < ptsAnnot.length) {
-            if(voisinageDebDeb(ptsAnnot[k], ptsAnnot[l])) {
+            if(neighborhoodBegBeg(ptsAnnot[k], ptsAnnot[l])) {
                 ptsAnnot[k] = ptsAnnot[l].reverse().concat(ptsAnnot[k]);
                 ptsAnnot.splice(l, 1);
-            } else if(voisinageDebFin(ptsAnnot[k], ptsAnnot[l])) {
+            } else if(neighborhoodBegEnd(ptsAnnot[k], ptsAnnot[l])) {
                 ptsAnnot[k] = ptsAnnot[l].concat(ptsAnnot[k]);
                 ptsAnnot.splice(l, 1);
-            } else if(voisinageDebFin(ptsAnnot[l], ptsAnnot[k])) {
+            } else if(neighborhoodBegEnd(ptsAnnot[l], ptsAnnot[k])) {
                 ptsAnnot[k] = ptsAnnot[k].concat(ptsAnnot[l]);
                 ptsAnnot.splice(l, 1);
-            } else if(voisinageFinFin(ptsAnnot[k], ptsAnnot[l])) {
+            } else if(neighborhoodEndEnd(ptsAnnot[k], ptsAnnot[l])) {
                 ptsAnnot[k] = ptsAnnot[k].concat(ptsAnnot[l].reverse());
                 ptsAnnot.splice(l, 1);
             } else {
@@ -1460,58 +1458,58 @@ function concatAnnotations(ptsAnnot) {
     return ptsAnnot;
 }
 
-function voisinageDebDeb(annot1, annot2) {
+function neighborhoodBegBeg(annot1, annot2) {
     let ret = false;
     if(annot1[1][0] <= annot2[1][0] + 1 && annot1[1][0] >= annot2[1][0] - 1) {
-        if(sontVoisins(annot1[0], annot2[0])) {
+        if(areNeighbors(annot1[0], annot2[0])) {
             ret = true;
-        } else if(sontVoisins(annot1[1], annot2[0])) {
+        } else if(areNeighbors(annot1[1], annot2[0])) {
             ret = true;
-        } else if(sontVoisins(annot1[0], annot2[1])) {
+        } else if(areNeighbors(annot1[0], annot2[1])) {
             ret = true;
-        } else if(sontVoisins(annot1[1], annot2[1])) {
+        } else if(areNeighbors(annot1[1], annot2[1])) {
             ret = true;
         }
     }
     return ret;
 }
 
-function voisinageDebFin(annot1, annot2) {
+function neighborhoodBegEnd(annot1, annot2) {
     let ret = false;
     let last = annot2.length-1;
     if(annot1[1][0] <= annot2[last][0] + 1 && annot1[1][0] >= annot2[last][0] - 1) {
-        if(sontVoisins(annot1[0], annot2[last])) {
+        if(areNeighbors(annot1[0], annot2[last])) {
             ret = true;
-        } else if(sontVoisins(annot1[1], annot2[last])) {
+        } else if(areNeighbors(annot1[1], annot2[last])) {
             ret = true;
-        } else if(sontVoisins(annot1[0], annot2[--last])) {
+        } else if(areNeighbors(annot1[0], annot2[--last])) {
             ret = true;
-        } else if(sontVoisins(annot1[1], annot2[last])) {
+        } else if(areNeighbors(annot1[1], annot2[last])) {
             ret = true;
         }
     }
     return ret;
 }
 
-function voisinageFinFin(annot1, annot2) {
+function neighborhoodEndEnd(annot1, annot2) {
     let ret = false;
     let last1 = annot1.length-1;
     let last2 = annot2.length-1;
     if(annot1[last1][0] <= annot2[last2][0] + 1 && annot1[last1][0] >= annot2[last2][0] - 1) {
-        if(sontVoisins(annot1[last1], annot2[last2])) {
+        if(areNeighbors(annot1[last1], annot2[last2])) {
             ret = true;
-        } else if(sontVoisins(annot1[last1 - 1], annot2[last2])) {
+        } else if(areNeighbors(annot1[last1 - 1], annot2[last2])) {
             ret = true;
-        } else if(sontVoisins(annot1[last1], annot2[--last2])) {
+        } else if(areNeighbors(annot1[last1], annot2[--last2])) {
             ret = true;
-        } else if(sontVoisins(annot1[last1 - 1], annot2[last2])) {
+        } else if(areNeighbors(annot1[last1 - 1], annot2[last2])) {
             ret = true;
         }
     }
     return ret;
 }
 
-function getExtremitesLigne(data, i, j) {
+function getLineEnds(data, i, j) {
     let k = j;
     while(data[(i*inferenceWidth+(k+1))*4] != 0) {
         k+=1;
@@ -1560,7 +1558,7 @@ function masqueHandler(e2) {
             for (var j = 0; j < canvas.width; ++j) {
                 if (!isBlack(data, i, j, canvas) != 0) {
                     let place = false;
-                    let ligne = getExtremitesLigne(data, i, j);
+                    let ligne = getLineEnds(data, i, j);
                     j = ligne[1][1] + 1;
                     let k = 0;
                     let longeurPtsAnnot = ptsAnnotations.length;
@@ -1586,7 +1584,7 @@ function masqueHandler(e2) {
                                 ptsAnnotations[k] = ptsAnnotations[k].concat(ligne);
                                 place = true;
                             } else if(ligne[1][0] -1 == ptsAnnotations[k][0][0]
-                                && sontEnvironEgales(ligne[1][1], ptsAnnotations[k][0][1], 1)) {//ligne au début de l'annotation
+                                && areEqualish(ligne[1][1], ptsAnnotations[k][0][1], 1)) {//ligne au début de l'annotation
                                 ptsAnnotations[k] = ligne.concat(ptsAnnotations[k]);
                                 place = true;
                             } else if(ligne[1][0] -1 == ptsAnnotations[k][longueurPtsAnnotK - 1][0]
@@ -1635,12 +1633,12 @@ function masqueHandler(e2) {
         var bonsPoints;
         for (i = 0; i < ptsAnnotations.length; ++i) {
             if(ptsAnnotations[i].length > gapImportantPoints || distance(ptsAnnotations[i][0], ptsAnnotations[i][ptsAnnotations[i].length - 1]) > minVisibleDistance){
-                bonsPoints = pointsImportants(ptsAnnotations[i]);
+                bonsPoints = importantPoints(ptsAnnotations[i]);
                 if (distance(bonsPoints[0], bonsPoints[bonsPoints.length - 1]) < 5) {
-                    modeCanvas = 3;
+                    canvasMode = 3;
                     bonsPoints.pop();
                 } else {
-                    modeCanvas = 1;
+                    canvasMode = 1;
                 }
 
                 for(let j = 0; j < bonsPoints.length; ++j) {
@@ -1666,7 +1664,7 @@ function masqueHandler(e2) {
                     create1Dot(x,y,idCircle);
                 }
                 layer.draw();
-                modeCanvas = 0;
+                canvasMode = 0;
                 btnCorrection.click();
             }
         }
@@ -1677,7 +1675,7 @@ function masqueHandler(e2) {
     // console.log(performance.now() - startTime);
 }
 
-function masquerMasque() {
+function hideMask() {
 
     if (isMaskVisible) {
         isMaskVisible = false;
@@ -1690,7 +1688,7 @@ function masquerMasque() {
     }
 }
 
-function pointsImportants(ligne) {
+function importantPoints(ligne) {
     var ptsAnnot = ligne;
     var points = [ptsAnnot[0]];
     var last = ptsAnnot.length-1;
@@ -1709,7 +1707,7 @@ function pointsImportants(ligne) {
                 let penteDeb = ptsAnnot[i][0] - ptsAnnot[i - gapImportantPoints][0] / ptsAnnot[i][1] - ptsAnnot[i - gapImportantPoints][1];
                 let penteFin = ptsAnnot[i + gapImportantPoints][0] - ptsAnnot[i][0] / ptsAnnot[i + gapImportantPoints][1] - ptsAnnot[i][1];
                 if(penteDeb / penteFin < 1 - ecartPente){
-                    if(!pointsEgaux(points[points.length-1], ptsAnnot[i - Math.round(gapImportantPoints/2)])) {
+                    if(!equalPoints(points[points.length-1], ptsAnnot[i - Math.round(gapImportantPoints/2)])) {
                         points.push(ptsAnnot[i - Math.round(gapImportantPoints/2)]);
                     }
                 }
@@ -1723,7 +1721,7 @@ function pointsImportants(ligne) {
         return points;
     }
 
-function pointsEgaux(pt1, pt2) {
+function equalPoints(pt1, pt2) {
     ret = false;
     if(pt1[0] == pt2[0] && pt1[1] == pt2[1]) {
         ret = true;
@@ -1763,7 +1761,7 @@ function displayConstructionVariables() {
 
 //Création et modification d'annotation
 function cancelAnnotation() {
-    if(modeCanvas == 1 || modeCanvas == 3) {
+    if(canvasMode == 1 || canvasMode == 3) {
         var children = layer.getChildren();
         var last = children[children.length - 1];
         if(last.getClassName() === 'Arc') {
@@ -1776,7 +1774,7 @@ function cancelAnnotation() {
             let idCercle = last.attrs['id'].split('-')[1];
             let idLine = last.attrs['id'].split('-')[0];
             children.pop();
-            if (line.points().length === 2 && modeCanvas != 1 && modeCanvas != 3) {
+            if (line.points().length === 2 && canvasMode != 1 && canvasMode != 3) {
                 children.pop();
                 children.pop();
             } else {
@@ -1816,7 +1814,7 @@ function create1Dot(x, y, idCircle) {
         strokeWidth: 2,
         id: idCircle,
     });
-    if(modeCanvas == 4) {
+    if(canvasMode == 4) {
         circle.draggable(true);
     }
     circle.attrs['x'] = x;
@@ -1859,8 +1857,8 @@ function create1Dot(x, y, idCircle) {
         layer.draw();
         if(tmpDot && clickType == clickDrag) {
             this.startDrag();
-        } else if(!(sontEnvironEgalesProportionnelles(oldPos[0], this.x())
-                && sontEnvironEgalesProportionnelles(oldPos[1], this.y()))) {
+        } else if(!(areProportionnalyEqualish(oldPos[0], this.x())
+                && areProportionnalyEqualish(oldPos[1], this.y()))) {
             createDot = false;
             newLineBool = false;
             poly = undefined;
@@ -1873,14 +1871,14 @@ function create1Dot(x, y, idCircle) {
         clickType = e.evt.button;
         switch(clickType) {
             case clickAdd:
-                if( modeCanvas === 5) {
+                if( canvasMode === 5) {
                     deleteDot(this);
                 } else {
                     displayCircle(this);
                 }
                 break;
             case clickDelete:
-                if( modeCanvas === 4) {
+                if( canvasMode === 4) {
                     deleteDot(this);
                 }
                 break;
@@ -1948,7 +1946,7 @@ function createLine(linePoints) {
             //Left click
             case clickAdd:
                 leftMouseDown = true;
-                switch (modeCanvas) {
+                switch (canvasMode) {
                     case 0:
                         displayLine(this);
                         break;
@@ -1971,7 +1969,7 @@ function createLine(linePoints) {
                                     let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
                                     let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
                                     let angle = getAngle(v1, v2);
-                                    if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                    if(areProportionnalyEqualish(angle, 180)) {
                                         let circles = getDots(idLigne);
                                         let zInd = circles[(i + 2) / 2].zIndex();
                                         let newPoints = this.points().slice(0, i + 2);
@@ -1990,7 +1988,7 @@ function createLine(linePoints) {
                                     let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
                                     let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
                                     let angle = getAngle(v1, v2);
-                                    if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                    if(areProportionnalyEqualish(angle, 180)) {
                                         let circles = getDots(idLigne);
                                         let zInd = circles[circles.length - 1].zIndex() + 1;
                                         this.points().push(clickPos.x);
@@ -2019,7 +2017,7 @@ function createLine(linePoints) {
                 break;
             // Mouse wheel click
             case clickDelete :
-                switch (modeCanvas) {
+                switch (canvasMode) {
                     case 4:
                         if(circle != undefined) {
                             deleteDot(circle);
@@ -2032,7 +2030,7 @@ function createLine(linePoints) {
                 break;
             //Right click
             case clickDrag:
-                switch (modeCanvas) {
+                switch (canvasMode) {
                     case 4:
                     if(!leftMouseDown && layer.getChildren(function(node) {return node.isDragging() && node.getClassName() === 'Arc'}).length == 0) {
                         if(circle != undefined) {
@@ -2050,7 +2048,7 @@ function createLine(linePoints) {
                                 let v1 = [pts[i] - clickPos.x, pts[i + 1] - clickPos.y];
                                 let v2 = [pts[i + 2] - clickPos.x, pts[i + 3] - clickPos.y];
                                 let angle = getAngle(v1, v2);
-                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                if(areProportionnalyEqualish(angle, 180)) {
                                     let circles = getDots(idLigne);
                                     let zInd = circles[(i + 2) / 2].zIndex();
                                     let newPoints = this.points().slice(0, i + 2);
@@ -2069,7 +2067,7 @@ function createLine(linePoints) {
                                 let v1 = [pts[pts.length - 2] - clickPos.x, pts[pts.length - 1] - clickPos.y];
                                 let v2 = [pts[0] - clickPos.x, pts[1] - clickPos.y];
                                 let angle = getAngle(v1, v2);
-                                if(sontEnvironEgalesProportionnelles(angle, 180)) {
+                                if(areProportionnalyEqualish(angle, 180)) {
                                     let circles = getDots(idLigne);
                                     let zInd = circles[circles.length - 1].zIndex() + 1;
                                     this.points().push(clickPos.x);
@@ -2100,14 +2098,14 @@ function createLine(linePoints) {
         }
     });
     poly.on('click', function () {
-        switch (modeCanvas) {
+        switch (canvasMode) {
             case 5:
                 let idLigne = this.attrs['id'];
                 deleteDots(idLigne);
                 this.destroy();
                 layer.draw();
-                boutonsOff();
-                modeCanvas = 0;
+                buttonsOff();
+                canvasMode = 0;
                 updateAnnotationsID(idLigne);
                 --nbElem;
                 break;
@@ -2121,7 +2119,7 @@ function createLine(linePoints) {
         leftMouseDown = false;
     });
 
-    if(modeCanvas == 3) {
+    if(canvasMode == 3) {
         let sel = document.getElementById('selectFill');
         poly.closed(true);
         poly.fill(sel.value);
