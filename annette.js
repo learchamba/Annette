@@ -516,62 +516,27 @@ function init() {
                                                     if(i + 3 == pts.length - 1) {
                                                         e.target.points().pop();
                                                         e.target.points().pop();
-                                                        // let circles = getDots(e.target.attrs['id']);
-                                                        // circles[circles.length - 1].destroy();
                                                     } if(i == 0) {
                                                         e.target.points().shift();
                                                         e.target.points().shift();
-                                                        // let circles = getDots(e.target.attrs['id']);
-                                                        // circles[0].destroy();
                                                     } else {
                                                         let pointsLigne1 = pts.slice(0, i+2);
                                                         let pointsLigne2 = pts.slice(i+2);
-
                                                         e.target.points(pointsLigne1);
                                                         remakeDots(e.target.attrs['id']);
 
-                                                        // modeCanvas = 5;
-                                                        // e.target.fire('click');
-                                                        // document.getElementById('btnCorrection').click();
-                                                        //
-                                                        // let poly = creerLigne([pointsLigne1[0],pointsLigne1[1]]);
-                                                        // poly.points(pointsLigne1);
-                                                        // nbPoints = 0;
-                                                        // let idCircle = poly.attrs['id'] + '-' + nbPoints;
-                                                        // ++nbPoints;
-                                                        // create1Dot(pointsLigne1[0], pointsLigne1[1], idCircle);
-                                                        // layer.add(poly);
-                                                        // for(let j = 2; j < pointsLigne1.length; ++j) {
-                                                        //     let x = pointsLigne1[j];
-                                                        //     let y = pointsLigne1[++j];
-                                                        //     poly.points(poly.points().concat([x, y]));
-                                                        //
-                                                        //     let idCircle = poly.attrs['id'] + '-' + nbPoints;
-                                                        //     ++nbPoints;
-                                                        //     create1Dot(x,y,idCircle);
-                                                        // }
-                                                        // layer.draw();
-
-                                                        let poly = creerLigne([pointsLigne2[0],pointsLigne2[1]]);
-                                                        poly.points(pointsLigne2);
-                                                        layer.add(poly);
-                                                        remakeDots(poly.attrs['id']);
-                                                        // nbPoints = 0;
-                                                        // idCircle = poly.attrs['id'] + '-' + nbPoints;
-                                                        // ++nbPoints;
-                                                        // create1Dot(pointsLigne2[0], pointsLigne2[1], idCircle);
-                                                        // layer.add(poly);
-                                                        // for(let j = 2; j < pointsLigne2.length; ++j) {
-                                                        //     let x = pointsLigne2[j];
-                                                        //     let y = pointsLigne2[++j];
-                                                        //     poly.points(poly.points().concat([x, y]));
-                                                        //
-                                                        //     let idCircle = poly.attrs['id'] + '-' + nbPoints;
-                                                        //     ++nbPoints;
-                                                        //     create1Dot(x,y,idCircle);
-                                                        // }
-
+                                                        if(pointsLigne2.length > 2) {
+                                                            let poly = creerLigne([pointsLigne2[0],pointsLigne2[1]]);
+                                                            poly.points(pointsLigne2);
+                                                            layer.add(poly);
+                                                            remakeDots(poly.attrs['id']);
+                                                        }
                                                     }
+                                                    if(e.target.points().length <= 2) {
+                                                        deleteDots(e.target.attrs['id']);
+                                                        e.target.destroy();
+                                                    }
+
                                                     layer.draw();
                                                     deleted = true;
                                                     tmpDot = false;
@@ -585,6 +550,7 @@ function init() {
                                     let circle = findCircle(clickPos);
                                     if(circle != undefined) {
                                         deleteDot(circle);
+                                        tmpDot = false;
                                     } else {
                                         if(tmpDot && poly.points().length <= 4) {
                                             deleteDots(poly.attrs['id']);
@@ -2171,12 +2137,7 @@ function creerLigne(ptsLigne) {
                                         newPoints = newPoints.concat(this.points().slice(i + 2));
                                         this.points(newPoints);
                                         let idPoint = idLigne + '-' + (i + 2) / 2;
-                                        // console.log('Décalage :');
                                         remakeDots(idLigne);
-                                        // decaleIDCercles(1, (i + 2) / 2, idLigne);
-                                        // var dot = create1Dot(clickPos.x, clickPos.y, idPoint);
-                                        // dot.zIndex(zInd);
-                                        // var dot = getDot(idLigne, idPoint.split('-')[1]);
                                         added = true;
                                         layer.draw();
                                     }
@@ -2204,6 +2165,8 @@ function creerLigne(ptsLigne) {
                                 if(dot != undefined) {
                                     mousedwn = true;
                                     clickType = 2;
+                                    dot.stroke('green');
+                                    layer.draw();
                                     dot.startDrag();
                                 }
                                 // }
