@@ -1553,6 +1553,7 @@ function masqueHandler(e2) {
     maskCanvas = document.getElementById('canvasMasque');
     xPictureInferenceRatio = currentPicture.width / inferenceWidth;
     yPictureInferenceRatio = currentPicture.height / inferenceHeight;
+    minVisibleDistance = currentPicture.width / inferenceWidth * 2.6;
     var img = new Image(inferenceWidth, inferenceHeight);
     img.onload = function() {
         maskCanvas.height = img.height;
@@ -1689,7 +1690,6 @@ function masqueHandler(e2) {
     // minVisibleDistance pour les images testées, le coefficient permet de garder
     // cette valeur pour toutes les images
 
-    minVisibleDistance = currentPicture.width / inferenceWidth * 2.6;
 
 
     // console.log(performance.now() - startTime);
