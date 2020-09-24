@@ -1,50 +1,49 @@
 // import * from "./onnx.ts";
 
-var backgroundRect;
-var blackRect;
-var btnLoad;
-var btnMask;
-var canvas;
-var clickAdd = 0; //left click
-var clickDelete = 1; //wheel click
-var clickDrag = 2; // right click
-var clickType;
-var constructMode;
+var backgroundRect; //Rect that contains the background picture
+var blackRect; //Rect that is completely black to be the background of the mask
+var btnLoad; //Button that loads the pictures
+var btnMask; //Button that hide/show the annotations
+var canvas; //Auxilliary canvas used in various treatments
+var clickAdd = 0; //Value of the click that creates points
+var clickDelete = 1; //Value of the click that deletes points
+var clickDrag = 2; //Value of the click that drags points
+var clickType; //Contains the value of the current click
+var constructMode; //Boolean that tells if we're adding points to a line
 var correctionLine = false;
-var createDot;
-var ctx;
-var currentCircle;
-var currentPicture;
-var currentPictureIndex;
-var deletedDot = false;
-var divMainImg;
-var dragged;
+var createDot; //Boolean that tells if a point should be created
+var ctx; //Context of the canvas
+var currentCircle; //Dot currently selected
+var currentPicture; //img DOM that contains the main picture
+var currentPictureIndex; //Index of the picture shown in current picture
+var deletedDot = false; //Boolean that tells if a dot has been deleted
+var divMainImg; //div DOM that contains the stage
+var dragged; //Boolean that indicates if the stage has been moved
 var ellipseClicked = 0;
-var ellipseFinished = false;
-var ellipseID;
-var ellipsePoints;
-var ellipseTmp = undefined;
+var ellipseFinished = false; //Boolean that tells if the construction of the ellipse is finished
+var ellipsePoints; //Coordinates clicked during the creation of an ellipse
+var ellipseTmp = undefined; //Ellipse that is being created
 var firstPointAdded = false;
 var gapImportantPoints = 10;
-var inferenceHeight = 270;
-var inferenceWidth = 480;
-var initialPosStage;
-var input;
-var intervalIDLoadImage;
-var isCircleDragged = false;
-var isMaskVisible = true;
-var layer;
-var layerBkgrd;
-var leftMouseDown = false;
+var inferenceHeight = 270; //Height of the inference masks
+var inferenceWidth = 480; //Width of the inference masks
+var initialPosStage; //Initial position of the stage
+var input; //input DOM used in the selection of the output files
+var intervalIDLoadImage; //Function that displays the pictures in the side pannel, called 4 times
+var isCircleDragged = false; //Boolean that indicates if a circle is being dragged
+var isMaskVisible = true; //Tells if the annotations are visible
+var layer; //Konva.Layer that contains the drawings
+var layerBkgrd; //Konva.Layer that contains the background picture
+var leftMouseDown = false; //Boolean that indicates if the left button is being pressed
 var linePoints;
-var listBeginning = 0;
+var listBeginning = 0; //Index of the first pictures that in shown in the side pannel
 var listIndex;
-var loadVideo = false;
-var longClick = 500;
-var maskCanvas;
+var loadVideo = false; //Boolean that tells that a video has been loaded
+var longClick = 500; //Duration of a long click
+var maskCanvas; //Canvas in which the mask is loaded
 var minVisibleDistance;
 var mousedwn = true;
-var nbElem;
+var nbElem; //Number of lines and ellipses
 var nbFrame;
 var nbPoints = 0;
 var newLineBool;
@@ -84,8 +83,6 @@ window.onload = init;
 
 //Inits
 function buttonsOff() {
-    document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg";
-    document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnSupprImage').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -117,8 +114,6 @@ function init() {
     divMainImg = document.getElementById('divImagePrincipale');
     currentPicture = document.getElementById('imageCourante');
 
-    document.getElementById('btnDefileHaut').addEventListener('click',scrollUp);
-    document.getElementById('btnDefileBas').addEventListener('click',scrollDown);
     document.getElementById('btnSupprImage').addEventListener('click',deletePictures);
     document.getElementById('btnChargeVideo').addEventListener('click', extractFromVideo);
     document.getElementById('btnCorrection').addEventListener('click', function () {
@@ -151,17 +146,6 @@ function init() {
         }
     });
 
-    document.getElementById('btnAjoutLigne').addEventListener('click',function(){
-        if(canvasMode === 1){
-            canvasMode = 0;
-            document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg";
-        } else {
-            canvasMode = 1;
-            buttonsOff();
-            document.getElementById('btnAjoutLigne').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
-        }
-    }, false);
-
     document.getElementById('btnAjoutEllipse').addEventListener('click',function(){
         if(canvasMode === 2){
             canvasMode = 0;
@@ -171,17 +155,6 @@ function init() {
             buttonsOff();
             document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
             ellipsePoints = [];
-        }
-    }, false);
-
-    document.getElementById('btnAjoutZoneFermee').addEventListener('click',function(){
-        if(canvasMode === 3){
-            canvasMode = 0;
-            document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg";
-        } else {
-            canvasMode = 3;
-            buttonsOff();
-            document.getElementById('btnAjoutZoneFermee').className = "btn btn-outline-dark btn-rounded btn-lg btn-secondary";
         }
     }, false);
 
@@ -291,37 +264,6 @@ function init() {
 
         showArcs();
 
-    });
-
-    document.getElementById('btnZoomPlus').addEventListener(('click'), function () {
-        if(zoomLevel <8) {
-            zoomLevel*=2;
-            var layerBkg = stage.getLayers()[0];
-            layerBkg.scale({x: zoomLevel, y: zoomLevel});
-            layer.scale({x: zoomLevel, y: zoomLevel});
-            if(canvasMode != 4) {
-                stage.draggable(true);
-            }
-            layerBkg.draw();
-            layer.draw();
-        }
-    });
-
-    document.getElementById('btnZoomMoins').addEventListener(('click'), function () {
-        if(zoomLevel > 1) {
-            zoomLevel/=2;
-            var layerBkg = stage.getLayers()[0];
-            layerBkg.scale({x: zoomLevel, y: zoomLevel});
-            layer.scale({x: zoomLevel, y: zoomLevel});
-            stage.x(initialPosStage[0]);
-            stage.y(initialPosStage[1]);
-            layerBkg.draw();
-            layer.draw();
-            if(zoomLevel === 1) {
-                stage.draggable(false);
-            }
-            currentPicture.scale
-        }
     });
 
     btnMask.addEventListener('click', hideMask);
@@ -800,7 +742,6 @@ function initCanvas() {
                                 } else {
                                     ellipseClicked = 1;
                                     this.draggable(true);
-                                    ellipseID = this.attrs['id'];
 
                                     var tr = new Konva.Transformer({
                                         boundBoxFunc: function (oldBoundBox, newBoundBox) {
