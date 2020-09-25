@@ -19,7 +19,7 @@ var currentPictureIndex; //Index of the picture shown in current picture
 var deletedDot = false; //Boolean that tells if a dot has been deleted
 var divMainImg; //div DOM that contains the stage
 var dragged; //Boolean that indicates if the stage has been moved
-var ellipseClicked = false; //Boolean that tells if an ellipse's transformer exists
+var ellipseTransformer = false; //Boolean that tells if an ellipse's transformer exists
 var ellipseFinished = false; //Boolean that tells if the construction of the ellipse is finished
 var ellipsePoints; //Coordinates clicked during the creation of an ellipse
 var ellipseTmp = undefined; //Ellipse that is being created
@@ -95,7 +95,7 @@ function buttonsOff() {
         for(var i = 0; i < layer.getChildren().length; ++i) {
             layer.getChildren()[i].draggable(false);
         }
-        ellipseClicked = false;
+        ellipseTransformer = false;
         var trns = layer.getChildren(function (node) {
             return node.getClassName() === 'Transformer';
         })[0];
@@ -124,7 +124,7 @@ function init() {
             for(var i = 0; i < layer.getChildren().length; ++i) {
                 layer.getChildren()[i].draggable(false);
             }
-            ellipseClicked = false;
+            ellipseTransformer = false;
             var trns = layer.getChildren(function (node) {
                 return node.getClassName() === 'Transformer';
             })[0];
@@ -269,7 +269,6 @@ function init() {
     btnLoad.addEventListener('click', load1Picture);
 
     initCanvas();
-    document.getElementById('btnAnnuler').addEventListener('click', cancelAnnotation);
 
     currentPicture.addEventListener('load', function () {
         var canvasWidth = this.clientWidth;
@@ -731,8 +730,8 @@ function initCanvas() {
 
                         elli.on('dblclick', function () {
                             if(canvasMode === 4) {
-                                if(ellipseClicked) {
-                                    ellipseClicked = false;
+                                if(ellipseTransformer) {
+                                    ellipseTransformer = false;
                                     var trns = layer.getChildren(function (node) {
                                         return node.getClassName() === 'Transformer';
                                     })[0];
@@ -746,7 +745,7 @@ function initCanvas() {
                                     // line.destroy();
                                     resetCorrection();
                                     layer.draw();
-                                    ellipseClicked = true;
+                                    ellipseTransformer = true;
                                     this.draggable(true);
 
                                     var tr = new Konva.Transformer({
@@ -795,7 +794,7 @@ function initCanvas() {
                     break;
                 case 4:
 
-                    if(!isEllipseClicked && !ellipseClicked && !dragged) {
+                    if(!isEllipseClicked && !ellipseTransformer && !dragged) {
                         let circle;
                         let idCircle;
                         let circles = findSeveralCircles(clickPos);
@@ -971,18 +970,6 @@ function initShortkeys() {
         }
     });
 
-    isCtrl = false;
-    $(document).keyup(function (e) {
-        if(e.which == 17)
-        isCtrl=false;
-    }).keydown(function (e) {
-        if(e.which == 17)
-        isCtrl=true;
-        if(e.which == 90 && isCtrl == true) {
-            document.getElementById('btnAnnuler').click();
-            return false;
-        }
-    });
 }
 
 function maskArcs() {
