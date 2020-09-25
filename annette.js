@@ -30,6 +30,7 @@ var initialPosStage; //Initial position of the stage
 var input; //input DOM used in the selection of the output files
 var intervalIDLoadImage; //Function that displays the pictures in the side pannel, called 4 times
 var isCircleDragged = false; //Boolean that indicates if a circle is being dragged
+var isEllipseClicked = false; //Boolean, indicates if the click is directed to an ellipse
 var isMaskVisible = true; //Tells if the annotations are visible
 var layer; //Konva.Layer that contains the drawings
 var layerBkgrd; //Konva.Layer that contains the background picture
@@ -335,6 +336,7 @@ function init() {
         stage.on('mousedown', function(e) {
 
             clickType = e.evt.button;
+            isEllipseClicked = e.target.getClassName() === 'Ellipse' || e.target.getClassName() === 'Transformer';
             pointCreated = false;
             switch (clickType) {
                 case clickAdd:
@@ -738,10 +740,10 @@ function initCanvas() {
                                     layer.draw();
                                     this.draggable(false);
                                 } else {
-                                    let lines = getAllLines();
-                                    let line = lines[lines.length - 1];
-                                    deleteDots(line.attrs['id']);
-                                    line.destroy();
+                                    // let lines = getAllLines();
+                                    // let line = lines[lines.length - 1];
+                                    // deleteDots(line.attrs['id']);
+                                    // line.destroy();
                                     resetCorrection();
                                     layer.draw();
                                     ellipseClicked = true;
@@ -762,6 +764,7 @@ function initCanvas() {
                                             return newBoundBox;
                                         },
                                     });
+
                                     layer.add(tr);
                                     tr.attachTo(elli);
                                     layer.draw();
@@ -791,8 +794,8 @@ function initCanvas() {
                     }
                     break;
                 case 4:
-                    // if()
-                    if(e.target.getClassName() !== 'Ellipse' && !dragged) {
+
+                    if(!isEllipseClicked && !ellipseClicked && !dragged) {
                         let circle;
                         let idCircle;
                         let circles = findSeveralCircles(clickPos);
