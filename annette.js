@@ -19,12 +19,11 @@ var currentPictureIndex; //Index of the picture shown in current picture
 var deletedDot = false; //Boolean that tells if a dot has been deleted
 var divMainImg; //div DOM that contains the stage
 var dragged; //Boolean that indicates if the stage has been moved
-var ellipseClicked = 0;
+var ellipseClicked = false; //Boolean that tells if an ellipse's transformer exists
 var ellipseFinished = false; //Boolean that tells if the construction of the ellipse is finished
 var ellipsePoints; //Coordinates clicked during the creation of an ellipse
 var ellipseTmp = undefined; //Ellipse that is being created
-var firstPointAdded = false;
-var gapImportantPoints = 10;
+var gapImportantPoints = 10; //Sampling coefficient for the polygonalisation
 var inferenceHeight = 270; //Height of the inference masks
 var inferenceWidth = 480; //Width of the inference masks
 var initialPosStage; //Initial position of the stage
@@ -35,40 +34,39 @@ var isMaskVisible = true; //Tells if the annotations are visible
 var layer; //Konva.Layer that contains the drawings
 var layerBkgrd; //Konva.Layer that contains the background picture
 var leftMouseDown = false; //Boolean that indicates if the left button is being pressed
-var linePoints;
+var linePoints; //Points of a line being constructed
 var listBeginning = 0; //Index of the first pictures that in shown in the side pannel
-var listIndex;
+var listIndex; //Index of the pictures being loaded for display in the side panel
 var loadVideo = false; //Boolean that tells that a video has been loaded
 var longClick = 500; //Duration of a long click
 var maskCanvas; //Canvas in which the mask is loaded
-var minVisibleDistance;
-var mousedwn = true;
+var minVisibleDistance; //Minimal distance on the screen that allows the creation of an annotation from the inference
 var nbElem; //Number of lines and ellipses
-var nbFrame;
-var nbPoints = 0;
-var newLineBool;
-var newLine;
-var oldPos = [];
-var oldPosStage = [];
-var picturesIndex;
-var pictureList = [];
-var pictureScroll = 0;
-var pointCreated;
-var poly;
-var ratioX;
-var ratioY;
-var readyToMerge;
-var selected = [];
-var stage;
-var tmpDot = false;
-var video;
-var wasCircleDragged = false;
-var xPictureInferenceRatio;
-var yPictureInferenceRatio;
-var zoomLevel = 1;
+var nbFrame; //Number of frame seen in the video
+var nbPoints = 0; //Number point of points of a line being constructed
+var newLineBool; //Boolean that indicates if a new line is being constructed
+var newLine; //The new line that is being constructed
+var oldPos = []; //Position of an object before moving
+var oldPosStage = []; //Position of the stage before moving
+var picturesIndex; //Index of the pictures of the side panel
+var pictureList = []; //List containing the list of the pictures
+var pictureScroll = 0; //Variable used to manage the scroll in the side panel
+var pointCreated; //Boolean, indicates if a point has been created by the current click
+var poly; //The line that is being constructed
+var ratioX; //Ratio of the display and natural width of the picture
+var ratioY; //Ratio of the display and natural height of the picture
+var readyToMerge; //Boolean that allows the merge of two lines
+var selected = []; //List of index of the currently selected pictures
+var stage; //Konva.Stage that contains everything about the drawings
+var tmpDot = false; //Boolean that tells if a dot is attached to the pointer for construction
+var video; // video DOM
+var wasCircleDragged = false; //Boolean that tells if a dot was moved in this action
+var xPictureInferenceRatio; //Ratio between the original picture and the inference mask (width)
+var yPictureInferenceRatio; //Ratio between the original picture and the inference mask (height)
+var zoomLevel = 1; //Variable between 1 and 8, is the zoom level
 
 
-var canvasMode = 0;
+var canvasMode = 0; //Variable that tells the current mode in the application
 /*
 * 0 : mode libre
 * 1 : ajout ligne
@@ -96,7 +94,7 @@ function buttonsOff() {
         for(var i = 0; i < layer.getChildren().length; ++i) {
             layer.getChildren()[i].draggable(false);
         }
-        ellipseClicked = 0;
+        ellipseClicked = false;
         var trns = layer.getChildren(function (node) {
             return node.getClassName() === 'Transformer';
         })[0];
@@ -125,7 +123,7 @@ function init() {
             for(var i = 0; i < layer.getChildren().length; ++i) {
                 layer.getChildren()[i].draggable(false);
             }
-            ellipseClicked = 0;
+            ellipseClicked = false;
             var trns = layer.getChildren(function (node) {
                 return node.getClassName() === 'Transformer';
             })[0];
@@ -732,7 +730,7 @@ function initCanvas() {
                         elli.on('dblclick', function () {
                             if(canvasMode === 4) {
                                 if(ellipseClicked) {
-                                    ellipseClicked = 0;
+                                    ellipseClicked = false;
                                     var trns = layer.getChildren(function (node) {
                                         return node.getClassName() === 'Transformer';
                                     })[0];
@@ -740,7 +738,13 @@ function initCanvas() {
                                     layer.draw();
                                     this.draggable(false);
                                 } else {
-                                    ellipseClicked = 1;
+                                    let lines = getAllLines();
+                                    let line = lines[lines.length - 1];
+                                    deleteDots(line.attrs['id']);
+                                    line.destroy();
+                                    resetCorrection();
+                                    layer.draw();
+                                    ellipseClicked = true;
                                     this.draggable(true);
 
                                     var tr = new Konva.Transformer({
@@ -787,7 +791,8 @@ function initCanvas() {
                     }
                     break;
                 case 4:
-                    if(!dragged) {
+                    // if()
+                    if(e.target.getClassName() !== 'Ellipse' && !dragged) {
                         let circle;
                         let idCircle;
                         let circles = findSeveralCircles(clickPos);
@@ -1073,6 +1078,13 @@ function deletePictures() {
         var id = "imageL"+i;
         document.getElementById(id).className = "img-fluid";
     }
+    if(pictureList.length < 4) {
+        for(let i = pictureList.length + 1; i <= 4; ++i) {
+            var id = "imageL"+i;
+            document.getElementById(id).src = "./assets/fondImageVide.png";
+            document.getElementById('nomImageL' + i).innerHTML = ""          ;
+        }
+    }
 }
 
 function displayPictureList() {
@@ -1088,6 +1100,7 @@ function downloadimage() {
 
 function imageHandler(e2) {
     var idImg = 'imageL' + picturesIndex;
+    document.getElementById('nomImageL' + picturesIndex).innerHTML = pictureList[picturesIndex + listBeginning - 1].name;
     document.getElementById(idImg).src = e2.target.result;
     ++picturesIndex;
 }
@@ -1703,7 +1716,6 @@ function displayConstructionVariables() {
     console.log("correctionLine : " + correctionLine);
     console.log("readyToMerge : " + readyToMerge);
     console.log("constructMode : " + constructMode);
-    console.log("firstPointAdded : " + firstPointAdded);
     console.log("dragged : " + dragged);
     console.log("wasCircleDragged : " + wasCircleDragged);
 }
@@ -1958,7 +1970,6 @@ function createLine(linePoints) {
                                 }
                                 let dot = findCircle(clickPos);
                                 if(dot != undefined) {
-                                    mousedwn = true;
                                     clickType = clickDrag;
                                     dot.stroke('green');
                                     layer.draw();
@@ -2039,7 +2050,6 @@ function createLine(linePoints) {
                             }
                             let dot = findCircle(clickPos);
                             if(dot != undefined) {
-                                mousedwn = true;
                                 clickType = clickDrag;
                                 dot.stroke('green');
                                 layer.draw();
@@ -2317,7 +2327,6 @@ function resetCorrection() {
     correctionLine = false;
     readyToMerge = false;
     constructMode = false;
-    firstPointAdded = false;
     dragged = false;
 }
 
