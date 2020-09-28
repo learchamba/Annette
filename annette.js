@@ -80,7 +80,7 @@ var canvasMode = 0; //Variable that tells the current mode in the application
 
 window.onload = init;
 
-//Inits
+//Inits and mask preparation functions
 function buttonsOff() {
     document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnSupprImage').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -263,6 +263,16 @@ function init() {
 
         showArcs();
 
+    });
+
+    document.getElementById('selectFill').addEventListener(('input'), function () {
+        if(layer != undefined) {
+            let lines = layer.getChildren(function(node) {return node.getClassName() === 'Line' && node.closed();});
+            for(let i = 0; i < lines.length; ++i) {
+                lines[i].fill(document.getElementById('selectFill').value);
+            }
+            layer.draw();
+        }
     });
 
     btnMask.addEventListener('click', hideMask);
@@ -490,6 +500,15 @@ function init() {
             e.evt.preventDefault();
         });
 
+        // stage.on('dblclick', function (e) {
+        //     clickType = e.evt.button;
+        //     if(clickType == clickAdd) {
+        //         if(e.target.getClassName() === 'Ellipse') {
+        //             e.target.fire('dblclick');
+        //         }
+        //     }
+        // });
+
         var scaleBy = 1.05;
 
         stage.dragBoundFunc(function (pos) {
@@ -582,7 +601,7 @@ function init() {
 
     }, false);
 
-    // Annotation button event
+    // Annotation button event, should work with ONNX when the uterus network will be compatible
     // document.getElementById('btnAnnot1').addEventListener('click', annotationImagePrincipale);
 
 
@@ -1040,7 +1059,7 @@ function showArcs() {
     layer.draw();
 }
 
-//Gestion des images
+//Pictures management
 function asyncLoadImage() {
     if(listIndex === listBeginning + 4 || listIndex === pictureList.length) {
         clearInterval(intervalIDLoadImage);
@@ -1302,7 +1321,7 @@ function removeDoubles(tab) {
     }
 }
 
-//Gestion de la vidéo
+//Video management
 function computeFrame() {
     var modulo = 22;
     if(nbFrame%modulo === modulo-1) {
@@ -1346,6 +1365,7 @@ function loadVideo(e1) {
     video.autoplay = true;
     video.muted = true;
 
+
     video.addEventListener('play', function () {
         setTimeout(function () {timerCallback();}, 0);
     });
@@ -1367,6 +1387,7 @@ function timerCallback() {
 }
 
 function videoHandler(e2) {
+    /*The video is played, muted, hidden and fastened*/
     video.src = e2.target.result;
     video.muted = true;
     video.playbackRate = 32;
@@ -1374,7 +1395,7 @@ function videoHandler(e2) {
     document.getElementById("explorerloadVideo").remove();
 }
 
-//Gestion des masques d'inférence
+//Inference mask management
 function concatAnnotations(annotPoints) {
     var k = 0;
     while(k < annotPoints.length) {
@@ -1435,12 +1456,22 @@ function importantPoints(ligne) {
     var last = ptsAnnot.length-1;
     let slopeDeviation = 0.2;
 
+    //removes the doubles in a line, should not exist
     for(let i = 1; i < ptsAnnot.length-1; ++i) {
         if(ptsAnnot[i][0] == ptsAnnot[i-1][0] && ptsAnnot[i][1] == ptsAnnot[i-1][1]) {
             ptsAnnot.splice(i--, 1);
         }
     }
     last = ptsAnnot.length-1;
+    /*
+        We sample the points with an 1/gapImportantPoints frequency. If the
+        sampled point seems to create similar slopes with the previously and
+        next sampled points, then it is ignored. Else we keep this point, it
+        makes an elbow in the curve and we check the point in the
+        middle between the previously and the currently sampled point, if the
+        slopes are different, we also keep this point. This allows locally a bit
+        more accuracy.
+    */
     for(var i = gapImportantPoints; i < last-gapImportantPoints; i+=gapImportantPoints) {
         if (!(ptsAnnot[i][0] - ptsAnnot[i-gapImportantPoints][0] == ptsAnnot[i+gapImportantPoints][0] - ptsAnnot[i][0]
             && ptsAnnot[i][1] - ptsAnnot[i-gapImportantPoints][1] == ptsAnnot[i+gapImportantPoints][1] - ptsAnnot[i][1])) {
@@ -1499,6 +1530,7 @@ function masqueHandler(e2) {
     yPictureInferenceRatio = currentPicture.height / inferenceHeight;
     minVisibleDistance = currentPicture.width / inferenceWidth * 2.6;
     var img = new Image(inferenceWidth, inferenceHeight);
+    //Insures that the mask is fully loaded before treatment
     img.onload = function() {
         maskCanvas.height = img.height;
         maskCanvas.width = img.width;
@@ -1509,6 +1541,28 @@ function masqueHandler(e2) {
         var k;
         gapImportantPoints = parseInt(document.getElementById('inputCoef').value);
         if(data.find(element => element == 255)) {
+            /*
+                For every pixel of the mask, if the pixel is white, a line is formed
+                from this pixel until the last next white pixel (on the same line)
+
+                Then we check if this line is the neighbor of an annotation, if yes,
+                we add this line at the correct extremity of this annotation, else
+                we create a new annotation composed only of this line. The first
+                test is here to insure that the line might be a candidate to be
+                a neighbor and not to go through every condition everytime. These
+                are explained next to them.
+
+                If the line is added to an annotation, then we check if we can
+                merge some annotations.
+
+                Once we've been through the entire mask we check which points are
+                relevant and make the list of points of every annotation with them.
+                If the ends of an annotation are close, then it is considered a closed
+                contour. Then the points value are multiplied by the ratio between
+                the displayed picture and the mask and the Konva.Line is created with
+                the associated dots and we enter the correction mode.
+            */
+
             for (var i = 0; i < maskCanvas.height; ++i) {
                 for (var j = 0; j < maskCanvas.width; ++j) {
                     if (!isBlack(data, i, j, maskCanvas) != 0) {
@@ -1614,7 +1668,7 @@ function masqueHandler(e2) {
                         let y = bonsPoints[j][0];
                         poly.points(poly.points().concat([x, y]));
 
-                        let idCircle = poly.attrs['id']+'-'+nbPoints;
+                        let idCircle = poly.attrs['id'] + '-' + nbPoints;
                         nbPoints++;
                         create1Dot(x,y,idCircle);
                     }
@@ -1640,6 +1694,7 @@ function masqueHandler(e2) {
 }
 
 function neighborhoodBegBeg(annot1, annot2) {
+    //tells if the 2 annotations are neighbors at their beginnings
     let ret = false;
     if(annot1[1][0] <= annot2[1][0] + 1 && annot1[1][0] >= annot2[1][0] - 1) {
         if(areNeighbors(annot1[0], annot2[0])) {
@@ -1656,6 +1711,7 @@ function neighborhoodBegBeg(annot1, annot2) {
 }
 
 function neighborhoodBegEnd(annot1, annot2) {
+    //tells if the 2 annotations are neighbors at one end and the other's beginning
     let ret = false;
     let last = annot2.length-1;
     if(annot1[1][0] <= annot2[last][0] + 1 && annot1[1][0] >= annot2[last][0] - 1) {
@@ -1673,6 +1729,7 @@ function neighborhoodBegEnd(annot1, annot2) {
 }
 
 function neighborhoodEndEnd(annot1, annot2) {
+    //tells if the 2 annotations are neighbors at their end
     let ret = false;
     let last1 = annot1.length-1;
     let last2 = annot2.length-1;
@@ -1691,6 +1748,7 @@ function neighborhoodEndEnd(annot1, annot2) {
 }
 
 //Debug
+/*these functions print the useful data about visual stuff to help debugging*/
 function displayCircle(circle) {
     console.log('id : ' + circle.attrs['id']);
     console.log('zIndex : ' + circle.zIndex());
@@ -1720,7 +1778,7 @@ function displayLine(line) {
     console.log(message);
 }
 
-//Création et modification d'annotation
+//Annotation creation and modification
 function cancelAnnotation() {
     if(canvasMode == 1 || canvasMode == 3) {
         var children = layer.getChildren();
@@ -2110,6 +2168,7 @@ function deleteDots(idLine) {
 }
 
 function findCircle(clickPos) {
+    //Finds a circle at the pointer position
     let allCircles = getAllDots();
     let found = false;
     let res = undefined;
@@ -2123,6 +2182,7 @@ function findCircle(clickPos) {
 }
 
 function findOtherCircle(idCircle, clickPos) {
+    //Finds a second dot where the idCircle one is
     let allCircles = layer.getChildren(function (node) {
         return node.getClassName() === 'Arc' && node.attrs['id'] != idCircle;
     });
@@ -2138,6 +2198,7 @@ function findOtherCircle(idCircle, clickPos) {
 }
 
 function findSeveralCircles(clickPos) {
+    //finds every dot at the pointer position
     let allCircles = getAllDots();
     let found = false;
     let res = [];
@@ -2219,6 +2280,7 @@ function getLine(idLine) {
 }
 
 function invertLinePoints(line) {
+    //Inverts the points of a line, without inverting x and y
     let invertedPoints = [];
     for(let i = line.points().length - 2; i >= 0; i -= 3) {
         invertedPoints.push(line.points()[i++]); //add x
@@ -2304,6 +2366,7 @@ function remakeDots(idLine) {
 }
 
 function resetCorrection() {
+    //sets the construction variables to default values
     if(tmpDot) {
         poly.points().pop();
         poly.points().pop();
@@ -2322,8 +2385,8 @@ function resetCorrection() {
 
 function shiftCirclesID(direction, index, idLine) {
     /*
-    direction = 1 => on ajoute un à chaque partie cercle des id
-    direction = -1 => on retire un à chaque partie cercle des id
+    direction = 1 => adds 1 to every 'circle part' of the IDs and to the Zindexes
+    direction = -1 => remove 1 to every 'circle part' of the IDs and to the Zindexes
     */
     let circles = getDots(idLine);
     if(direction == -1) {
@@ -2397,7 +2460,7 @@ function updateAnnotationsID(id) {
     }
 }
 
-//Gestion de l'export textuel
+//Textual conversion of the annotations
 function serializeEllipse(elli) {
     let beginning = "\t\t{\n"
     let center = "\t\t\t\"center\" : [" + elli.x().toString() + ", " + elli.y().toString() + "],\n";
@@ -2444,7 +2507,7 @@ function serializeLines(lines) {
     return str;
 }
 
-//Gestion du réseau onnx
+//ONNX Network management
 // function annotationImagePrincipale() {
     // runExample();
     // const myOnnxSession = new onnx.InferenceSession();
