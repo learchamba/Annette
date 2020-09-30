@@ -82,6 +82,9 @@ window.onload = init;
 
 //Inits and mask preparation functions
 function buttonsOff() {
+    /*
+        Turns every button off
+    */
     document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnSupprImage').className = "btn btn-outline-dark btn-rounded btn-lg";
     document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -108,6 +111,12 @@ function buttonsOff() {
 }
 
 function init() {
+    /*
+        Initializes the document, gives the listeners to the buttons, contains
+        the creation of the stage in the currentPicture load event, calls the
+        other two init functions
+    */
+
     btnMask = document.getElementById('btnMasquer');
     btnLoad = document.getElementById('btnChargement');
     divMainImg = document.getElementById('divImagePrincipale');
@@ -115,7 +124,10 @@ function init() {
 
     document.getElementById('btnSupprImage').addEventListener('click',deletePictures);
     document.getElementById('btnChargeVideo').addEventListener('click', extractFromVideo);
-    document.getElementById('btnCorrection').addEventListener('click', function () {
+    document.getElementById('btnCorrection').addEventListener('click', function() {
+        /*
+            (de)activates the correction mode
+        */
         if(canvasMode === 4){
             canvasMode = 0;
             document.getElementById('btnCorrection').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -145,7 +157,7 @@ function init() {
         }
     });
 
-    document.getElementById('btnAjoutEllipse').addEventListener('click',function(){
+    document.getElementById('btnAjoutEllipse').addEventListener('click', function(){
         if(canvasMode === 2){
             canvasMode = 0;
             document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -157,7 +169,7 @@ function init() {
         }
     }, false);
 
-    document.getElementById('btnSupprAnnotation').addEventListener(('click'), function () {
+    document.getElementById('btnSupprAnnotation').addEventListener(('click'), function() {
         if(canvasMode === 5)  {
             canvasMode = 0;
             document.getElementById('btnSupprAnnotation').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -169,7 +181,7 @@ function init() {
         }
     });
 
-    document.getElementById('btnValider').addEventListener(('click'), function () {
+    document.getElementById('btnValider').addEventListener(('click'), function() {
         maskArcs();
         var y = document.getElementById("DLCanvas");
         let pictureName = pictureList[currentPictureIndex - 1].name.split('.')[0];
@@ -265,7 +277,7 @@ function init() {
 
     });
 
-    document.getElementById('selectFill').addEventListener(('input'), function () {
+    document.getElementById('selectFill').addEventListener(('input'), function() {
         if(layer != undefined) {
             let lines = layer.getChildren(function(node) {return node.getClassName() === 'Line' && node.closed();});
             for(let i = 0; i < lines.length; ++i) {
@@ -280,7 +292,7 @@ function init() {
 
     initCanvas();
 
-    currentPicture.addEventListener('load', function () {
+    currentPicture.addEventListener('load', function() {
         var canvasWidth = this.clientWidth;
         var canvasHeight = this.clientHeight;
         stage = new Konva.Stage({
@@ -324,7 +336,10 @@ function init() {
         layer = new Konva.Layer();
         stage.add(layer);
 
-        stage.on('dragstart', function (e) {
+        stage.on('dragstart', function(e) {
+            /*
+                Validates or not the start of a drag of the stage
+            */
             oldPosStage = [stage.x()/zoomLevel, stage.y()/zoomLevel];
             if(clickType == clickDrag) { //} && !isCircleDragged) {
                 dragged = true;
@@ -333,7 +348,11 @@ function init() {
             }
         });
 
-        stage.on('dragend', function (e) {
+        stage.on('dragend', function(e) {
+            /*
+                Checks if the drag of the stage has been long to be considered
+                a drag
+            */
             let newPos = [stage.x()/zoomLevel, stage.y()/zoomLevel];
             if(clickType != clickDrag || distance(oldPosStage,newPos) < 3) {
                 dragged = false;
@@ -343,6 +362,10 @@ function init() {
         });
 
         stage.on('mousedown', function(e) {
+            /*
+                Handles every event of a mouse button going down, checks
+                which button it is and do the correct thing to do according to it
+            */
 
             clickType = e.evt.button;
             isEllipseClicked = e.target.getClassName() === 'Ellipse' || e.target.getClassName() === 'Transformer';
@@ -490,17 +513,23 @@ function init() {
                     }
                 });
 
-        stage.on('mouseup', function (e) {
+        stage.on('mouseup', function(e) {
+            /*
+                Stops every drag when a mouse button is going up
+            */
             if(!tmpDot) {
                 stopAllDrag();
             }
         });
 
-        stage.on('contextmenu', function (e) {
+        stage.on('contextmenu', function(e) {
+            /*
+                Prevents the usual manu opening associated to a right click
+            */
             e.evt.preventDefault();
         });
 
-        // stage.on('dblclick', function (e) {
+        // stage.on('dblclick', function(e) {
         //     clickType = e.evt.button;
         //     if(clickType == clickAdd) {
         //         if(e.target.getClassName() === 'Ellipse') {
@@ -542,6 +571,9 @@ function init() {
         });
 
         stage.on('wheel', (e) => {
+            /*
+                Handles the zoom of the stage
+            */
             e.evt.preventDefault();
             var oldScale = stage.scaleX();
             var pointer = stage.getPointerPosition();
@@ -606,7 +638,7 @@ function init() {
 
 
     for(var i = 1; i<5; ++i) {
-        document.getElementById("imageL"+i).addEventListener('dblclick', function (e) {
+        document.getElementById("imageL"+i).addEventListener('dblclick', function(e) {
             document.getElementById('imageCourante').src = e.target.src;
             currentPictureIndex = listBeginning + parseInt(e.target.id.charAt(e.target.id.length-1));
             document.getElementById('nomImageCourante').innerHTML = pictureList[currentPictureIndex - 1].name;
@@ -652,9 +684,13 @@ function init() {
 }
 
 function initCanvas() {
+    /*
+        Handles the 'add' click of the div DOM that contains the stage,
+        contains the creation of ellipses
+    */
 
     var divCanvas = document.getElementById('divCanvas');
-    divCanvas.addEventListener('click',function(e) {
+    divCanvas.addEventListener('click', function(e) {
         let clickPos = getCLickPos();
         if(clickType == clickAdd) {
             if(ellipseTmp != undefined && ellipsePoints.length === 3) {
@@ -747,7 +783,7 @@ function initCanvas() {
                             }
                         });
 
-                        elli.on('dblclick', function () {
+                        elli.on('dblclick', function() {
                             if(canvasMode === 4) {
                                 if(ellipseTransformer) {
                                     ellipseTransformer = false;
@@ -789,7 +825,7 @@ function initCanvas() {
                                 }
                             }
                         });
-                        elli.on('click', function () {
+                        elli.on('click', function() {
                             if( canvasMode === 5) {
                                 this.destroy();
                                 layer.draw();
@@ -797,7 +833,7 @@ function initCanvas() {
                                 canvasMode = 0;
                             }
                         });
-                        elli.on('transform', function (e) {
+                        elli.on('transform', function(e) {
                             let tmpX = this.scaleX();
                             let tmpY = this.scaleY();
                             let trans = layer.getChildren(function(node) {return node.getClassName() === 'Transformer';})[0];
@@ -922,12 +958,15 @@ function initCanvas() {
 }
 
 function initShortkeys() {
-    /* Raccourcis existants
-    * c : mode correction
-    * s : mode suppression
-    * m : masquer les annotations
-    * ctrl + s : valider l'annotation
-    * ctrl + z : annuler la dernière annotation
+    /*
+        Initializes the shortkeys of the app
+    */
+
+    /* Existing shortkeys
+    * c : correction mode
+    * s : suppression mode
+    * m : hide annotations
+    * ctrl + s : validate the annotation, creates the files and download them
     */
 
     let isC = false;
@@ -992,11 +1031,18 @@ function initShortkeys() {
 }
 
 function maskArcs() {
+    /*
+        Hides the arcs not to see them in the annotated picture export
+    */
     var arcs = getAllDots();
     arcs.hide();
 }
 
 function prepareMask() {
+    /*
+        Prepares the stage to make it look like a real mask, with correct
+        dimensions, drawing width and color
+    */
     let lines = getAllLines();
     let ellipses = getAllEllipses();
     maskArcs();
@@ -1024,6 +1070,10 @@ function prepareMask() {
 }
 
 function setMaskToNormal() {
+    /*
+        Sets the stage back to normal with background, drawing size and drawings
+        in the correct colors and width
+    */
     let lines = getAllLines();
     let ellipses = getAllEllipses();
     showArcs();
@@ -1053,6 +1103,9 @@ function setMaskToNormal() {
 }
 
 function showArcs() {
+    /*
+        Shows the dots, used after the picture export is downloaded
+    */
     var arcs = getAllDots();
 
     arcs.show();
@@ -1061,6 +1114,9 @@ function showArcs() {
 
 //Pictures management
 function asyncLoadImage() {
+    /*
+        Loads the pictures in the lateral pannel
+    */
     if(listIndex === listBeginning + 4 || listIndex === pictureList.length) {
         clearInterval(intervalIDLoadImage);
     } else {
@@ -1078,6 +1134,9 @@ function asyncLoadImage() {
 }
 
 function deletePictures() {
+    /*
+        Deletes the selected pictures
+    */
 
     while(selected.length != 0){
         pictureList.splice(pictureList.indexOf(selected.shift()),1);
@@ -1097,17 +1156,27 @@ function deletePictures() {
 }
 
 function displayPictureList() {
+    /*
+        Calls regularly asyncLoadImage, with a time interval to let time for the
+        pictures to load. It stops after 4 times (cf asyncLoadImage)
+    */
     picturesIndex = 1;
     listIndex = listBeginning;
     intervalIDLoadImage = setInterval(asyncLoadImage, 100);
 }
 
 function downloadimage() {
+    /*
+        Removes the canvas used to download
+    */
     document.getElementById("DLCanvas").remove();
     nbPoints = 0;
 }
 
 function imageHandler(e2) {
+    /*
+        Sets the pictures and its name in the lateral pannel
+    */
     var idImg = 'imageL' + picturesIndex;
     document.getElementById('nomImageL' + picturesIndex).innerHTML = pictureList[picturesIndex + listBeginning - 1].name;
     document.getElementById(idImg).src = e2.target.result;
@@ -1115,6 +1184,9 @@ function imageHandler(e2) {
 }
 
 function isBlack(pixel) {
+    /*
+        Tells if a pixel is black
+    */
     let ret = true;
     if(pixel[0] != 0) {
         ret = false;
@@ -1127,6 +1199,9 @@ function isBlack(pixel) {
 }
 
 function isRed(pixel) {
+    /*
+        Tells if a pixel is red
+    */
     let ret = true;
     if(pixel[0] != 255) {
         ret = false;
@@ -1139,6 +1214,9 @@ function isRed(pixel) {
 }
 
 function killTransformers() {
+    /*
+        Destroys the transformer if there's one
+    */
     var trns = layer.getChildren(function (node) {
         return node.getClassName() === 'Transformer';
     })[0];
@@ -1148,6 +1226,10 @@ function killTransformers() {
 }
 
 function load1Picture() {
+    /*
+        Creates an input element that will open the file explorer if clicked and
+        simulates the click
+    */
 
     $("body").append("<input type='file' id='explorerChargement' accept='image/*' multiple>");
     input = document.getElementById('explorerChargement');
@@ -1158,6 +1240,9 @@ function load1Picture() {
 }
 
 function loadimage(e1) {
+    /*
+        Loads the files selected in the file explorer opened by load1Picture
+    */
     for(var i = 0; i < e1.target.files.length; ++i) {
         pictureList.push(e1.target.files[i]);
     }
@@ -1166,6 +1251,10 @@ function loadimage(e1) {
 }
 
 function realiasing(data) {
+    /*
+        Should have removed the anti-aliasing in the picture, but the browser
+        will add some more right after
+    */
     let width = currentPicture.width;
     for(let i = 0; i < currentPicture.height; ++i) {
         for(let j = 0; j < width; ++j) {
@@ -1188,6 +1277,11 @@ function realiasing(data) {
 }
 
 function scrollUp() {
+    /*
+        Was used to scroll the side pannel before the the use of the wheel,
+        contains the part that handles the video which was not implemented in
+        the wheel scroll function yet.
+    */
     var id;
     var nextID = "imageL1";
     if(listBeginning < pictureList.length - 4) {
@@ -1210,6 +1304,11 @@ function scrollUp() {
 }
 
 function scrollDown() {
+    /*
+        Was used to scroll the side pannel before the the use of the wheel,
+        contains the part that handles the video which was not implemented in
+        the wheel scroll function yet.
+    */
     var id="imageL4";
     var previousID;
     if(listBeginning <= pictureList.length - 4 && listBeginning > 0) {
@@ -1233,6 +1332,9 @@ function scrollDown() {
 
 //Utils
 function areEqualish(val1, val2, error) {
+    /*
+        Tells if two values are equal with a possible error
+    */
     let ret = false;
     if(val1 <= val2 + error && val1 >= val2 - error) {
         ret = true;
@@ -1241,6 +1343,9 @@ function areEqualish(val1, val2, error) {
 }
 
 function areProportionnalyEqualish(val1, val2) {
+    /*
+        Same as areEqualish but with a fixed error
+    */
     let ret = false;
     let error = 4 * val1 / 100; //4% de la valeur à comparer
     if(val1 <= val2 + error && val1 >= val2 - error) {
@@ -1250,6 +1355,9 @@ function areProportionnalyEqualish(val1, val2) {
 }
 
 function areNeighbors(p1, p2, angle) {
+    /*
+        Tells if two pixels are neighbors
+    */
     var ret  = false;
     if(areEqualish(p1[0], p2[0], 1) && areEqualish(p1[1], p2[1], 1)) {
         ret = true;
@@ -1258,17 +1366,25 @@ function areNeighbors(p1, p2, angle) {
 }
 
 function distance(pt1, pt2) {
+    /*
+        Euclidean distance between two points
+    */
     var x = pt1[0] - pt2[0];
     var y = pt1[1] - pt2[1];
     return Math.sqrt(x * x + y * y);
 }
 
 function dotProduct(v1, v2) {
-    return (v1[0] * v2[0] + v1[1] * v2[1]) * Math.cos(angle);
+    /*
+        Dot product of two vectors
+    */
+    return (v1[0] * v2[0] + v1[1] * v2[1]) * Math.cos(getAngle(v1, v2));
 }
 
 function findPos(obj) {
-    /*works everywhere on the document, not only the stage*/
+    /*
+        Gets the pointer position, works everywhere on the document, not only the stage
+    */
     var curleft = 0, curtop = 0;
     if (obj.offsetParent) {
         do {
@@ -1281,6 +1397,9 @@ function findPos(obj) {
 }
 
 function getAngle(v1, v2) {
+    /*
+        Finds the angle between two vectors
+    */
     let angle = Math.atan2(v2[1], v2[0]) - Math.atan2(v1[1], v1[0]);
     if(angle < 0) {
         angle += 2 * Math.PI;
@@ -1290,6 +1409,9 @@ function getAngle(v1, v2) {
 }
 
 function insertAt(tab, elem, pos) {
+    /*
+        Insert an element in tab at an exact position
+    */
     var deb = tab.slice(0,pos);
     var fin = tab.slice(pos, tab.length);
     deb.push(elem);
@@ -1297,6 +1419,9 @@ function insertAt(tab, elem, pos) {
 }
 
 function removeDoubles(tab) {
+    /*
+        Removes the doubled values in a tab
+    */
     for(let i = 0; i < tab.length; ++i) {
         let temp = tab[i];
         for(let j = i + 1; j < tab.length; ++j) {
@@ -1323,17 +1448,24 @@ function removeDoubles(tab) {
 
 //Video management
 function computeFrame() {
+    /*
+        Extracts video frames into images, fakes a video frequency
+    */
     var modulo = 22;
     if(nbFrame%modulo === modulo-1) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        var dataurl = imagedata_to_image(ctx.getImageData(0,0,canvas.width, canvas.height)).src;
-        pictureList.push(dataurl);
+        var image = imagedata_to_image(ctx.getImageData(0,0,canvas.width, canvas.height)).src;
+        pictureList.push(image);
     }
     nbFrame++;
 }
 
 function extractFromVideo() {
+    /*
+        Creates an input element that will open the file explorer if clicked and
+        simulates the click
+    */
     $("body").append("<input type='file' id='explorerloadVideo' accept='video/*'>");
     input = document.getElementById('explorerloadVideo');
     var y = document.getElementById("explorerloadVideo");
@@ -1343,6 +1475,9 @@ function extractFromVideo() {
 }
 
 function imagedata_to_image(imagedata) {
+    /*
+        Creates an Image object from an imageData via a dataURL
+    */
     var canvas = document.createElement('canvas');
     var ctx = canvas.getContext('2d');
     canvas.width = imagedata.width;
@@ -1355,6 +1490,9 @@ function imagedata_to_image(imagedata) {
 }
 
 function loadVideo(e1) {
+    /*
+        Plays the video to extract the pictures shown (not all of them)
+    */
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d');
     var vid = e1.target.files[0];
@@ -1366,7 +1504,7 @@ function loadVideo(e1) {
     video.muted = true;
 
 
-    video.addEventListener('play', function () {
+    video.addEventListener('play', function() {
         setTimeout(function () {timerCallback();}, 0);
     });
     video.onended = function () {
@@ -1379,6 +1517,9 @@ function loadVideo(e1) {
 }
 
 function timerCallback() {
+    /*
+        Stops to computeFrame if the video is ended or paused
+    */
     if (this.video.paused || this.video.ended) {
         return;
     }
@@ -1387,7 +1528,9 @@ function timerCallback() {
 }
 
 function videoHandler(e2) {
-    /*The video is played, muted, hidden and fastened*/
+    /*
+        The video is played (faster), muted and hidden
+    */
     video.src = e2.target.result;
     video.muted = true;
     video.playbackRate = 32;
@@ -1397,6 +1540,9 @@ function videoHandler(e2) {
 
 //Inference mask management
 function concatAnnotations(annotPoints) {
+    /*
+        Check if any annotations are neighbors and if so, merges them
+    */
     var k = 0;
     while(k < annotPoints.length) {
         var l = k+1;
@@ -1423,6 +1569,9 @@ function concatAnnotations(annotPoints) {
 }
 
 function getLineEnds(data, i, j) {
+    /*
+        Returns the coordinates of the first and the last white pixel in a row
+    */
     let k = j;
     while(data[(i*inferenceWidth+(k+1))*4] != 0) {
         k+=1;
@@ -1431,6 +1580,9 @@ function getLineEnds(data, i, j) {
 }
 
 function hideMask() {
+    /*
+        Hides/shows the annotations by hiding the corresponding Konva.Layer
+    */
     if (isMaskVisible) {
         isMaskVisible = false;
         layer.hide();
@@ -1443,6 +1595,9 @@ function hideMask() {
 }
 
 function equalPoints(pt1, pt2) {
+    /*
+        Tells if two points (with 2D coordinates) are the same
+    */
     ret = false;
     if(pt1[0] == pt2[0] && pt1[1] == pt2[1]) {
         ret = true;
@@ -1451,6 +1606,10 @@ function equalPoints(pt1, pt2) {
 }
 
 function importantPoints(ligne) {
+    /*
+        Determines which points of an annotation are relevant in the construction
+        of a Konva.Line
+    */
     var ptsAnnot = ligne;
     var points = [ptsAnnot[0]];
     var last = ptsAnnot.length-1;
@@ -1494,6 +1653,9 @@ function importantPoints(ligne) {
     }
 
 function isBlack(data, i ,j, canvas) {
+    /*
+        Tells if the pixel at theses coordinates is black
+    */
     ret = true;
     let index = (i * canvas.width + j) * 4;
     if(data[index] != 0) {
@@ -1510,11 +1672,15 @@ function isBlack(data, i ,j, canvas) {
 }
 
 function loadMask() {
+    /*
+        Creates an input element that will open the file explorer if clicked and
+        simulates the click. The mask should be chosen at this point
+    */
 
-    $("body").append("<input type='file' id='explorerMasque' accept='image/*' multiple>");
+    $("body").append("<input type='file' id='explorerMasque' accept='image/*' >");
     var inputTmp = document.getElementById('explorerMasque');
     var y = document.getElementById("explorerMasque");
-    y.addEventListener('change', function (e1) {
+    y.addEventListener('change', function(e1) {
         var fr = new FileReader();
         fr.onload = masqueHandler;
         fr.readAsDataURL(e1.target.files[0]);
@@ -1524,6 +1690,10 @@ function loadMask() {
 }
 
 function masqueHandler(e2) {
+    /*
+        Makes the whole process of polygonalisation of the mask and drawing
+        on the stage
+    */
     $("body").append("<canvas id='canvasMasque' style='visibility: visible' width='" + inferenceWidth + "' height='" + inferenceHeight + "'>")
     maskCanvas = document.getElementById('canvasMasque');
     xPictureInferenceRatio = currentPicture.width / inferenceWidth;
@@ -1748,7 +1918,9 @@ function neighborhoodEndEnd(annot1, annot2) {
 }
 
 //Debug
-/*these functions print the useful data about visual stuff to help debugging*/
+/*
+    These functions print the useful data about visual stuff to help debugging
+*/
 function displayCircle(circle) {
     console.log('id : ' + circle.attrs['id']);
     console.log('zIndex : ' + circle.zIndex());
@@ -1780,6 +1952,10 @@ function displayLine(line) {
 
 //Annotation creation and modification
 function cancelAnnotation() {
+    /*
+        Was used to destroy the last drawn dot in the line construction mode
+        (Deprecated)
+    */
     if(canvasMode == 1 || canvasMode == 3) {
         var children = layer.getChildren();
         var last = children[children.length - 1];
@@ -1822,6 +1998,9 @@ function concatLines(line1, line2) {
 }
 
 function create1Dot(x, y, idCircle) {
+    /*
+        Creates a dot with the correct properties, is associated with a Konva.line
+    */
     var circle = new Konva.Arc({
         x: x,
         y: y,
@@ -1838,7 +2017,7 @@ function create1Dot(x, y, idCircle) {
     circle.attrs['x'] = x;
     circle.attrs['y'] = y;
 
-    circle.on('dragstart', function () {
+    circle.on('dragstart', function() {
         if(clickType == clickDrag) {
             this.stroke('green');
             oldPos[0] =  this.x();
@@ -1849,13 +2028,13 @@ function create1Dot(x, y, idCircle) {
             this.stopDrag();
         }
     });
-    circle.on('mousedown', function (e) {
+    circle.on('mousedown', function(e) {
         clickType = e.evt.button;
         this.stroke('green');
         layer.draw();
         this.startDrag();
     });
-    circle.on('dragmove', function (e) {
+    circle.on('dragmove', function(e) {
             createDot = false;
             newLineBool = false;
             nbPoints = 0;
@@ -1870,7 +2049,7 @@ function create1Dot(x, y, idCircle) {
             oldPos[0] = this.x();
             oldPos[1] = this.y();
     });
-    circle.on('dragend', function () {
+    circle.on('dragend', function() {
         this.stroke('red');
         layer.draw();
         isCircleDragged = false;
@@ -1886,7 +2065,7 @@ function create1Dot(x, y, idCircle) {
             // dragged = true;
         }
     });
-    circle.on('click', function (e) {
+    circle.on('click', function(e) {
         clickType = e.evt.button;
         switch(clickType) {
             case clickAdd:
@@ -1903,7 +2082,7 @@ function create1Dot(x, y, idCircle) {
                 break;
         }
     });
-    circle.on('contextMenu', function (e) {
+    circle.on('contextMenu', function(e) {
         e.preventDefault();
     });
     layer.add(circle);
@@ -1913,6 +2092,9 @@ function create1Dot(x, y, idCircle) {
 }
 
 function createTempDot(idLine) {
+    /*
+        Creates the dot that is moved until placed at its correct position
+    */
     let clickPos = getCLickPos();
     let line = getLine(idLine);
     poly = line;
@@ -1931,6 +2113,9 @@ function createTempDot(idLine) {
 }
 
 function createLine(linePoints) {
+    /*
+        Creates a Konva.Line with the correct properties
+    */
     var poly = new Konva.Line({
         points: linePoints,
         stroke: 'blue',
@@ -1938,11 +2123,19 @@ function createLine(linePoints) {
         id: nbElem,
     });
     ++nbElem;
-    poly.on('dragstart', function () {
+    poly.on('dragstart', function() {
+        /*
+            Saved the initial position of a Konva.Line before drag
+            (Deprecated)
+        */
         oldPos[0] =  this.x();
         oldPos[1] =  this.y();
     });
-    poly.on('dragend', function () {
+    poly.on('dragend', function() {
+        /*
+            Moved the associated dots of a Konva.Line avec dragging interval
+            (Deprecated)
+        */
         let idLine = this.attrs['id'];
         let circles = getDots(idLine);
         let diffX = this.x() - oldPos[0];
@@ -1953,7 +2146,11 @@ function createLine(linePoints) {
         }
         layer.draw();
     });
-    poly.on('mousedown', function (e) {
+    poly.on('mousedown', function(e) {
+        /*
+            Handles every event of a mouse button going down, checks
+            which button it is and do the correct thing to do according to it
+        */
         clickType = e.evt.button;
         let clickPos = getCLickPos();
         let circle;
@@ -2114,7 +2311,10 @@ function createLine(linePoints) {
             default:
         }
     });
-    poly.on('click', function () {
+    poly.on('click', function() {
+        /*
+            Manages only the delete mode
+        */
         switch (canvasMode) {
             case 5:
                 let idLine = this.attrs['id'];
@@ -2130,6 +2330,9 @@ function createLine(linePoints) {
         }
     });
     poly.on('mouseup', function() {
+        /*
+            Stop every drag if a mouse button is going up on the Line
+        */
         stopAllDrag();
         leftMouseDown = false;
     });
@@ -2143,6 +2346,9 @@ function createLine(linePoints) {
 }
 
 function deleteDot(dot) {
+    /*
+        Deletes a dot whatever is its position in a line
+    */
     let id = dot.attrs['id'];
     let lineID = parseInt(id.split('-')[0]);
     let pointID = parseInt(id.split('-')[1]);
@@ -2161,6 +2367,9 @@ function deleteDot(dot) {
 }
 
 function deleteDots(idLine) {
+    /*
+        Deletes all dots associated with a Konva.Line
+    */
     let dots = getDots(idLine);
     for(let i = 0; i < dots.length; ++i) {
         dots[i].destroy();
@@ -2241,6 +2450,10 @@ function getAllLines() {
 }
 
 function getCLickPos() {
+    /*
+        Gets the pointer position in the original picture with the correct
+        coordinates, even after a zoom and a stage move
+    */
     let clickPos = stage.getPointerPosition();
     clickPos.x = (clickPos.x  - stage.x()) / zoomLevel;
     clickPos.y = (clickPos.y  - stage.y()) / zoomLevel;
@@ -2291,6 +2504,9 @@ function invertLinePoints(line) {
 }
 
 function lineFusion(dot) {
+    /*
+        Handles the merging of two lines, depending on the clicked points, etc
+    */
     let clickPos = getCLickPos();
     circle = findCircle(clickPos);
     let idPoint = circle.attrs['id'];
@@ -2354,6 +2570,10 @@ function lineFusion(dot) {
 }
 
 function remakeDots(idLine) {
+    /*
+        Deletes and recreates every dot associated with a Konva.Line, easy way
+        to correctly reorganize points after a change in the Konva.Line points
+    */
     let line = getLine(idLine);
     deleteDots(idLine);
     for(let i = 0; i < line.points().length; ++i) {
@@ -2433,6 +2653,9 @@ function shiftCirclesIdNTimes(sens, indice, idLigne, n) {
 }
 
 function stopAllDrag() {
+    /*
+        Stops every Konva.Node that is being dragged
+    */
     let elem = layer.getChildren(function(node){
         return node.getClassName() ==='Arc' && node.isDragging();
     });
@@ -2445,6 +2668,10 @@ function stopAllDrag() {
 }
 
 function updateAnnotationsID(id) {
+    /*
+        Changes the ID of every line with one superior to the parameter one,
+        changes also the ID of every associated dot
+    */
     let lines = getAllLines();
     for(let i = id; i < lines.length; ++i) {
         let idTmp = lines[i].attrs['id'];
@@ -2462,6 +2689,9 @@ function updateAnnotationsID(id) {
 
 //Textual conversion of the annotations
 function serializeEllipse(elli) {
+    /*
+        Return the JSON String that describes one ellipse
+    */
     let beginning = "\t\t{\n"
     let center = "\t\t\t\"center\" : [" + elli.x().toString() + ", " + elli.y().toString() + "],\n";
     let radX = "\t\t\t\"radiusX\" : " + elli.radiusX().toString() + ",\n";
@@ -2473,6 +2703,9 @@ function serializeEllipse(elli) {
 }
 
 function serializeEllipses(ellipses) {
+    /*
+        Return the JSON String that describes every ellipses
+    */
     let str = "{\n\t\"ellipses\" : [\n";
     for(let i = 0; i < ellipses.length - 1; ++i) {
         str += serializeEllipse(ellipses[i]) + ',\n';
@@ -2483,6 +2716,9 @@ function serializeEllipses(ellipses) {
 }
 
 function serializeLine(line) {
+    /*
+        Return the JSON String that describes one line
+    */
     let beginning = "\t\t{\n"
     let closed = "\t\t\t\"closed\" : " + line.closed().toString() + ",\n";
     let points = "\t\t\t\"points\" : [";
@@ -2498,6 +2734,9 @@ function serializeLine(line) {
 }
 
 function serializeLines(lines) {
+    /*
+        Return the JSON String that describes every line
+    */
     let str = "{\n\t\"lines\" : [\n";
     for(let i = 0; i < lines.length - 1; ++i) {
         str += serializeLine(lines[i]) + ',\n';
