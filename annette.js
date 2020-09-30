@@ -158,6 +158,9 @@ function init() {
     });
 
     document.getElementById('btnAjoutEllipse').addEventListener('click', function(){
+        /*
+            Activates the ellipse mode and initializes the list of points
+        */
         if(canvasMode === 2){
             canvasMode = 0;
             document.getElementById('btnAjoutEllipse').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -170,6 +173,9 @@ function init() {
     }, false);
 
     document.getElementById('btnSupprAnnotation').addEventListener(('click'), function() {
+        /*
+            (de)activates the delete mode
+        */
         if(canvasMode === 5)  {
             canvasMode = 0;
             document.getElementById('btnSupprAnnotation').className = "btn btn-outline-dark btn-rounded btn-lg";
@@ -182,6 +188,10 @@ function init() {
     });
 
     document.getElementById('btnValider').addEventListener(('click'), function() {
+        /*
+            Creates the output files according to the checked input DOMs
+            and download them, creates a zip file if several files are wanted
+        */
         maskArcs();
         var y = document.getElementById("DLCanvas");
         let pictureName = pictureList[currentPictureIndex - 1].name.split('.')[0];
@@ -278,6 +288,9 @@ function init() {
     });
 
     document.getElementById('selectFill').addEventListener(('input'), function() {
+        /*
+            Fills or empties the closed lines
+        */
         if(layer != undefined) {
             let lines = layer.getChildren(function(node) {return node.getClassName() === 'Line' && node.closed();});
             for(let i = 0; i < lines.length; ++i) {
@@ -293,6 +306,12 @@ function init() {
     initCanvas();
 
     currentPicture.addEventListener('load', function() {
+        /*
+            Triggered when the main picture is loaded, creates the Konva.Stage,
+            the associated events, the background Konva.Layer (with the picture
+            in it and a black Konva.Rect to make the masks in the end) and the
+            Konva.Layer that will contains the drawings.
+        */
         var canvasWidth = this.clientWidth;
         var canvasHeight = this.clientHeight;
         stage = new Konva.Stage({
@@ -639,6 +658,10 @@ function init() {
 
     for(var i = 1; i<5; ++i) {
         document.getElementById("imageL"+i).addEventListener('dblclick', function(e) {
+            /*
+                Allows the loading of the main picture by double clicking the
+                side pannel pictures
+            */
             document.getElementById('imageCourante').src = e.target.src;
             currentPictureIndex = listBeginning + parseInt(e.target.id.charAt(e.target.id.length-1));
             document.getElementById('nomImageCourante').innerHTML = pictureList[currentPictureIndex - 1].name;
@@ -686,7 +709,7 @@ function init() {
 function initCanvas() {
     /*
         Handles the 'add' click of the div DOM that contains the stage,
-        contains the creation of ellipses
+        contains the creation of ellipses, dots, lines, etc
     */
 
     var divCanvas = document.getElementById('divCanvas');
@@ -755,6 +778,10 @@ function initCanvas() {
                         layer.add(elli);
 
                         stage.on('mousemove', function() {
+                            /*
+                                Modifies the ellipse that is being constructed
+                                according to step in the construction we are in
+                            */
                             if(ellipseTmp != undefined) {
                                 if(ellipsePoints.length == 1) {
                                     let clickPos = getCLickPos();
@@ -784,6 +811,10 @@ function initCanvas() {
                         });
 
                         elli.on('dblclick', function() {
+                            /*
+                                Creates or deletes a Konva.Transformer attached
+                                to the ellipse
+                            */
                             if(canvasMode === 4) {
                                 if(ellipseTransformer) {
                                     ellipseTransformer = false;
@@ -826,6 +857,9 @@ function initCanvas() {
                             }
                         });
                         elli.on('click', function() {
+                            /*
+                                Deletes the ellipse in suppression mode
+                            */
                             if( canvasMode === 5) {
                                 this.destroy();
                                 layer.draw();
@@ -834,6 +868,11 @@ function initCanvas() {
                             }
                         });
                         elli.on('transform', function(e) {
+                            /*
+                                Change the transform behaviour to apply the
+                                changes to the radius and not the scale of the
+                                ellipse
+                            */
                             let tmpX = this.scaleX();
                             let tmpY = this.scaleY();
                             let trans = layer.getChildren(function(node) {return node.getClassName() === 'Transformer';})[0];
@@ -1505,6 +1544,9 @@ function loadVideo(e1) {
 
 
     video.addEventListener('play', function() {
+        /*
+            Calls the correct function when the video is played
+        */
         setTimeout(function () {timerCallback();}, 0);
     });
     video.onended = function () {
@@ -1681,6 +1723,9 @@ function loadMask() {
     var inputTmp = document.getElementById('explorerMasque');
     var y = document.getElementById("explorerMasque");
     y.addEventListener('change', function(e1) {
+        /*
+            Make the mask management functions to be called when it is loaded
+        */
         var fr = new FileReader();
         fr.onload = masqueHandler;
         fr.readAsDataURL(e1.target.files[0]);
@@ -2018,6 +2063,9 @@ function create1Dot(x, y, idCircle) {
     circle.attrs['y'] = y;
 
     circle.on('dragstart', function() {
+        /*
+            Confirms the start of a drag or stops it
+        */
         if(clickType == clickDrag) {
             this.stroke('green');
             oldPos[0] =  this.x();
@@ -2029,12 +2077,18 @@ function create1Dot(x, y, idCircle) {
         }
     });
     circle.on('mousedown', function(e) {
+        /*
+            Simply colors circles when clicked
+        */
         clickType = e.evt.button;
         this.stroke('green');
         layer.draw();
         this.startDrag();
     });
     circle.on('dragmove', function(e) {
+        /*
+            Makes the associated point move with the same coordinates as the Arc
+        */
             createDot = false;
             newLineBool = false;
             nbPoints = 0;
@@ -2050,6 +2104,10 @@ function create1Dot(x, y, idCircle) {
             oldPos[1] = this.y();
     });
     circle.on('dragend', function() {
+        /*
+            Removes the green color, tells if the drag should stop or not and
+            sets a few values for
+        */
         this.stroke('red');
         layer.draw();
         isCircleDragged = false;
@@ -2066,6 +2124,9 @@ function create1Dot(x, y, idCircle) {
         }
     });
     circle.on('click', function(e) {
+        /*
+            Deletes the dot according to the button and mode used
+        */
         clickType = e.evt.button;
         switch(clickType) {
             case clickAdd:
@@ -2083,6 +2144,9 @@ function create1Dot(x, y, idCircle) {
         }
     });
     circle.on('contextMenu', function(e) {
+        /*
+            Just prevents the opening of the usual right click menu
+        */
         e.preventDefault();
     });
     layer.add(circle);
